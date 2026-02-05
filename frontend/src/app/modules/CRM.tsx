@@ -170,19 +170,23 @@ export function CRM() {
 
     setCreatingLead(true);
     try {
+      // Clean up empty strings - convert to undefined for optional fields
       const leadData = {
-        name: leadForm.name,
-        company: leadForm.company || undefined,
-        email: leadForm.email || undefined,
-        phone: leadForm.phone || undefined,
+        name: leadForm.name.trim(),
+        company: leadForm.company?.trim() || undefined,
+        email: leadForm.email?.trim() || undefined,
+        phone: leadForm.phone?.trim() || undefined,
         value: leadForm.value || 0,
         status: leadForm.status,
-        stage: leadForm.stage || undefined,
-        notes: leadForm.notes || undefined,
+        stage: leadForm.stage?.trim() || undefined,
+        notes: leadForm.notes?.trim() || undefined,
         assigned_to: leadForm.assigned_to || undefined,
       };
 
+      console.log('[CRM] Creating lead with data:', leadData);
       const response = await crmApi.createLead(leadData);
+      console.log('[CRM] Create lead response:', response);
+      
       if (response.success && response.data) {
         toast.success("Lead created successfully!");
         setShowCreateModal(false);
@@ -201,11 +205,19 @@ export function CRM() {
         // Reload leads to show the new one
         await loadLeads();
       } else {
-        toast.error(response.error || "Failed to create lead");
+        const errorMsg = response.error || response.message || "Failed to create lead";
+        console.error('[CRM] Create lead failed:', errorMsg, response);
+        toast.error(errorMsg);
       }
     } catch (error: any) {
-      console.error('Failed to create lead:', error);
-      toast.error(error?.response?.data?.error || "Failed to create lead");
+      console.error('[CRM] Create lead exception:', error);
+      const errorMsg = error?.response?.data?.error || error?.message || error?.response?.data?.message || "Failed to create lead";
+      console.error('[CRM] Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+      });
+      toast.error(errorMsg);
     } finally {
       setCreatingLead(false);
     }
@@ -984,7 +996,7 @@ export function CRM() {
                     )}
                   </SelectContent>
                 </Select>
-              </div>
+            </div>
             <div>
               <Label htmlFor="notes">Notes</Label>
                 <Textarea 
@@ -1021,7 +1033,6 @@ export function CRM() {
               </Button>
               <Button 
                 type="submit"
-                onClick={handleCreateLead} 
                 className="rounded-xl"
                 disabled={creatingLead || !leadForm.name}
               >

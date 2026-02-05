@@ -7,14 +7,7 @@
   "background_color": "#FFFFFF",
   "theme_color": "#C7F33C",
   "orientation": "portrait-primary",
-  "icons": [
-    {
-      "src": "/scissorlogo.png",
-      "sizes": "any",
-      "type": "image/png",
-      "purpose": "any"
-    }
-  ],
+  "icons": [],
   "categories": ["business", "productivity"],
   "screenshots": [],
   "shortcuts": [

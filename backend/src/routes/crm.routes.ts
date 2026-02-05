@@ -12,16 +12,16 @@ router.use(authenticate);
 // Validation schemas
 const createLeadSchema = z.object({
   name: z.string().min(1),
-  company: z.string().optional(),
-  email: z.string().email().optional(),
-  phone: z.string().optional(),
+  company: z.string().optional().nullable(),
+  email: z.union([z.string().email(), z.literal('')]).optional().nullable(),
+  phone: z.string().optional().nullable().or(z.literal('')),
   value: z.number().min(0).default(0),
   status: z.enum(['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']).default('new'),
-  stage: z.string().optional(),
-  project_type: z.string().optional(),
-  deadline: z.string().optional(),
-  notes: z.string().optional(),
-  assigned_to: z.string().uuid().optional(),
+  stage: z.string().optional().nullable().or(z.literal('')),
+  project_type: z.string().optional().nullable().or(z.literal('')),
+  deadline: z.string().optional().nullable().or(z.literal('')),
+  notes: z.string().optional().nullable().or(z.literal('')),
+  assigned_to: z.union([z.string().uuid(), z.literal('')]).optional().nullable(),
 });
 
 /**
@@ -69,17 +69,37 @@ router.get('/leads/:id', async (req, res) => {
  */
 router.post('/leads', requireSales, async (req, res) => {
   try {
+    logger.info('Creating lead - Request body:', req.body);
+    logger.info('User:', (req as any).user);
+    
     const leadData = createLeadSchema.parse(req.body);
     const userId = (req as any).user.id;
     
-    const lead = await CRMService.createLead(leadData, userId);
+    // Clean up empty strings to undefined for optional fields
+    const cleanedData: any = {
+      ...leadData,
+      company: leadData.company || undefined,
+      email: leadData.email || undefined,
+      phone: leadData.phone || undefined,
+      stage: leadData.stage || undefined,
+      project_type: leadData.project_type || undefined,
+      deadline: leadData.deadline || undefined,
+      notes: leadData.notes || undefined,
+      assigned_to: leadData.assigned_to || undefined,
+    };
+    
+    logger.info('Cleaned lead data:', cleanedData);
+    const lead = await CRMService.createLead(cleanedData, userId);
+    logger.info('Lead created successfully:', lead.id);
     res.status(201).json({ success: true, data: lead });
   } catch (error) {
     if (error instanceof z.ZodError) {
+      logger.error('Validation error in POST /leads:', error.errors);
       return res.status(400).json({ success: false, error: 'Invalid data', details: error.errors });
     }
     logger.error('Error in POST /leads:', error);
-    res.status(500).json({ success: false, error: 'Failed to create lead' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ success: false, error: 'Failed to create lead', message: errorMessage });
   }
 });
 
