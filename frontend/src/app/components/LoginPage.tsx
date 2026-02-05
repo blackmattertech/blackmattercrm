@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useAuthStore } from "../../store/auth.store";
-import { Loader2, Mail, Lock, Shield, UserPlus } from "lucide-react";
+import { Loader2, Mail, Lock, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
@@ -12,6 +12,7 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [isSignup, setIsSignup] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const { login, signup, isLoading, error } = useAuthStore();
 
@@ -23,7 +24,7 @@ export function LoginPage() {
       return;
     }
 
-    const success = await login(email, password);
+    const success = await login(email, password, rememberMe);
     if (success) {
       toast.success("Login successful!");
     } else {
@@ -46,7 +47,16 @@ export function LoginPage() {
 
     const success = await signup(email, password, fullName);
     if (success) {
-      toast.success("Account created successfully!");
+      toast.success("Account created! Please wait for admin approval before logging in.");
+      // Reset form
+      setEmail("");
+      setPassword("");
+      setFullName("");
+      // Switch to login tab
+      setTimeout(() => {
+        const loginTab = document.querySelector('[value="login"]') as HTMLElement;
+        if (loginTab) loginTab.click();
+      }, 2000);
     } else {
       toast.error(error || "Failed to create account");
     }
@@ -57,8 +67,12 @@ export function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo/Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent mb-4">
-            <Shield className="w-8 h-8 text-accent-foreground" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4">
+            <img 
+              src="/scissorlogo.png" 
+              alt="BlackMatter ERP Logo" 
+              className="w-16 h-16 object-contain"
+            />
           </div>
           <h1 className="text-3xl font-medium mb-2">BlackMatter ERP</h1>
           <p className="text-sm text-muted-foreground">
@@ -115,7 +129,12 @@ export function LoginPage() {
 
                 <div className="flex items-center justify-between text-sm">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" className="rounded" />
+                    <input
+                      type="checkbox"
+                      className="rounded"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                    />
                     <span className="text-muted-foreground">Remember me</span>
                   </label>
                   <button

@@ -34,7 +34,13 @@ export class CRMService {
     offset?: number;
   }): Promise<{ data: Lead[]; count: number }> {
     try {
-      let query = supabase.from('leads').select('*', { count: 'exact' });
+      // Join with user_profiles to get assigned user name
+      let query = supabase
+        .from('leads')
+        .select(`
+          *,
+          assigned_user:user_profiles!assigned_to(id, full_name, email, role)
+        `, { count: 'exact' });
 
       if (filters.status) {
         query = query.eq('status', filters.status);
@@ -62,7 +68,13 @@ export class CRMService {
 
       if (error) throw error;
 
-      return { data: data || [], count: count || 0 };
+      // Map the data to include assigned user name
+      const mappedData = (data || []).map((lead: any) => ({
+        ...lead,
+        assigned_to_name: lead.assigned_user?.full_name || lead.assigned_user?.email || null,
+      }));
+
+      return { data: mappedData, count: count || 0 };
     } catch (error) {
       logger.error('Error fetching leads:', error);
       throw error;

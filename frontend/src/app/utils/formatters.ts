@@ -35,17 +35,28 @@ export function formatINRCompact(amount: number): string {
 }
 
 /**
- * Formats a date in Indian format (DD/MM/YYYY)
+ * Formats a date in dd-mmm-yyyy format (e.g., 15-Jan-2024)
  * @param date - Date string or Date object
  * @returns Formatted date string
  */
-export function formatIndianDate(date: string | Date): string {
+export function formatDate(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[d.getMonth()];
   const year = d.getFullYear();
   
-  return `${day}/${month}/${year}`;
+  return `${day}-${month}-${year}`;
+}
+
+/**
+ * Formats a date in Indian format (DD/MM/YYYY)
+ * @param date - Date string or Date object
+ * @returns Formatted date string
+ * @deprecated Use formatDate for dd-mmm-yyyy format instead
+ */
+export function formatIndianDate(date: string | Date): string {
+  return formatDate(date);
 }
 
 /**

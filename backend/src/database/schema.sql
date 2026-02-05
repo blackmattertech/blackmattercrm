@@ -9,30 +9,21 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 -- User Profiles (extends Supabase auth.users)
 CREATE TABLE IF NOT EXISTS user_profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email VARCHAR(255) UNIQUE,
+  email VARCHAR(255) UNIQUE NOT NULL,
   phone VARCHAR(20),
   full_name VARCHAR(255),
   role VARCHAR(20) NOT NULL DEFAULT 'sales' CHECK (role IN ('admin', 'sales', 'developers', 'designers')),
   avatar_url TEXT,
-  is_active BOOLEAN DEFAULT true,
+  is_active BOOLEAN DEFAULT false,
+  approval_status VARCHAR(20) DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
+  approved_by UUID REFERENCES user_profiles(id),
+  approved_at TIMESTAMPTZ,
   last_login_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- OTP Storage (kept for backward compatibility, not used with email auth)
-CREATE TABLE IF NOT EXISTS otp_codes (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  phone VARCHAR(20),
-  code VARCHAR(6) NOT NULL,
-  expires_at TIMESTAMPTZ NOT NULL,
-  verified BOOLEAN DEFAULT false,
-  attempts INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_otp_phone ON otp_codes(phone);
-CREATE INDEX idx_otp_expires ON otp_codes(expires_at);
+-- OTP Storage removed - using email/password authentication only
 
 -- ============================================
 -- CRM MODULE

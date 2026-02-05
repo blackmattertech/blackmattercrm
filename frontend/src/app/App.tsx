@@ -19,12 +19,23 @@ import { LoadingState } from "./components/LoadingState";
 export default function App() {
   const [currentSection, setCurrentSection] = useState<NavSection>("dashboard");
   const [showWelcome, setShowWelcome] = useState(false);
-  const { isAuthenticated, isLoading, checkAuth, user } = useAuthStore();
+  const { isAuthenticated, isLoading, user } = useAuthStore();
 
   useEffect(() => {
-    // Check authentication on mount
-    checkAuth();
-  }, [checkAuth]);
+    // Initialize auth on mount - this loads from storage first
+    const { initialize } = useAuthStore.getState();
+    initialize();
+    
+    // Fallback: ensure loading doesn't hang forever
+    const timeout = setTimeout(() => {
+      const { isLoading } = useAuthStore.getState();
+      if (isLoading) {
+        useAuthStore.setState({ isLoading: false });
+      }
+    }, 15000); // 15 second max loading time
+    
+    return () => clearTimeout(timeout);
+  }, []); // Empty deps - only run once on mount
 
   useEffect(() => {
     // Show welcome screen on first visit (only if authenticated)

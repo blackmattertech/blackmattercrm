@@ -6,12 +6,8 @@ import { Package, Calendar, DollarSign } from "lucide-react";
 import { formatINR } from "../utils/formatters";
 
 export function Products() {
-  const products = [
-    { id: 1, name: "Website Design", type: "Service", price: 5000, billing: "One-time", status: "active" as const },
-    { id: 2, name: "Pro Plan", type: "Subscription", price: 99, billing: "Monthly", status: "active" as const, subscribers: 45 },
-    { id: 3, name: "Enterprise Plan", type: "Subscription", price: 499, billing: "Monthly", status: "active" as const, subscribers: 12 },
-    { id: 4, name: "Consulting", type: "Service", price: 150, billing: "Hourly", status: "active" as const },
-  ];
+  // Empty array - will be populated from API when products endpoints are implemented
+  const products: any[] = [];
 
   return (
     <div className="min-h-screen bg-soft-white dark:bg-background">
@@ -28,7 +24,14 @@ export function Products() {
       <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="w-full space-y-6 lg:space-y-8">
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-            {products.map((product) => (
+            {products.length === 0 ? (
+              <div className="col-span-4 text-center py-12 text-muted-foreground">
+                <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No products found</p>
+                <p className="text-xs mt-2">Products will appear here once they are added</p>
+              </div>
+            ) : (
+              products.map((product) => (
               <div key={product.id} className="bg-card border border-border rounded-2xl p-5 lg:p-6 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-4">
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-foreground to-foreground/80 flex items-center justify-center">
@@ -54,7 +57,8 @@ export function Products() {
                   View Details
                 </Button>
               </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

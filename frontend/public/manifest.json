@@ -9,16 +9,10 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
+      "src": "/scissorlogo.png",
+      "sizes": "any",
       "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "categories": ["business", "productivity"],
@@ -28,15 +22,13 @@
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "View dashboard",
-      "url": "/?section=dashboard",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "url": "/?section=dashboard"
     },
     {
       "name": "CRM",
       "short_name": "CRM",
       "description": "Manage leads",
-      "url": "/?section=crm",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "url": "/?section=crm"
     }
   ]
 }

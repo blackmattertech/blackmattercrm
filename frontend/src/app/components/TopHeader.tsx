@@ -12,7 +12,6 @@ import {
   Moon,
   Menu,
   Search,
-  Hash,
   LogOut
 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -46,9 +45,12 @@ const navItems = [
   { id: "settings" as const, label: "Settings", icon: Settings },
 ];
 
-export function TopHeader({ currentSection, onNavigate, notificationCount = 0, onMenuClick, user }: TopHeaderProps) {
+export function TopHeader({ currentSection, onNavigate, notificationCount = 0, onMenuClick, user: userProp }: TopHeaderProps) {
   const [darkMode, setDarkMode] = useState(false);
-  const { logout } = useAuthStore();
+  const { logout, user: authUser } = useAuthStore();
+  
+  // Use auth store user as primary source, fallback to prop
+  const user = authUser || userProp;
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -85,9 +87,11 @@ export function TopHeader({ currentSection, onNavigate, notificationCount = 0, o
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center">
-              <Hash className="w-5 h-5 text-background" />
-            </div>
+            <img 
+              src="/scissorlogo.png" 
+              alt="BlackMatter ERP" 
+              className="w-8 h-8 object-contain"
+            />
             <span className="hidden sm:inline-block font-medium text-lg">ERP</span>
           </div>
         </div>

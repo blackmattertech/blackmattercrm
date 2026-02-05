@@ -15,6 +15,7 @@ import { Button } from "./ui/button";
 import { cn } from "./ui/utils";
 import { NavSection } from "./AppLayout";
 import { useState } from "react";
+import { useAuthStore } from "../../store/auth.store";
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ const navItems = [
 
 export function MobileMenu({ isOpen, onClose, currentSection, onNavigate, notificationCount = 0 }: MobileMenuProps) {
   const [darkMode, setDarkMode] = useState(false);
+  const { user } = useAuthStore();
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -121,8 +123,12 @@ export function MobileMenu({ isOpen, onClose, currentSection, onNavigate, notifi
             </Button>
             
             <div className="px-4 py-3 rounded-xl bg-muted">
-              <p className="text-sm font-medium">John Doe</p>
-              <p className="text-xs text-muted-foreground">Director</p>
+              <p className="text-sm font-medium">
+                {user?.full_name || user?.email?.split("@")[0] || "User"}
+              </p>
+              <p className="text-xs text-muted-foreground capitalize">
+                {user?.role || "User"}
+              </p>
             </div>
           </div>
         </div>

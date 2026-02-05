@@ -17,7 +17,7 @@ import {
   Activity
 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { formatINR, formatINRCompact, formatIndianDate } from "../utils/formatters";
+import { formatINR, formatINRCompact, formatDate } from "../utils/formatters";
 
 export function Dashboard() {
   const [activityFilter, setActivityFilter] = useState<"all" | "sales" | "accounts" | "team">("all");
@@ -40,25 +40,10 @@ export function Dashboard() {
     { stage: "Won", count: 4 },
   ];
 
-  const activities = [
-    { id: 1, type: "sales", title: "New lead added", description: "John Smith - Enterprise Plan", time: "2 mins ago", icon: Users },
-    { id: 2, type: "accounts", title: "Invoice paid", description: `INV-2024-001 - ${formatINRCompact(5200)}`, time: "15 mins ago", icon: CheckCircle2 },
-    { id: 3, type: "team", title: "Project assigned", description: "Sarah completed Website Redesign", time: "1 hour ago", icon: Briefcase },
-    { id: 4, type: "accounts", title: "Payment overdue", description: `INV-2024-056 - ${formatINRCompact(2800)}`, time: "2 hours ago", icon: AlertCircle },
-    { id: 5, type: "sales", title: "Deal closed", description: `Acme Corp - ${formatINRCompact(12000)}`, time: "3 hours ago", icon: TrendingUp },
-  ];
-
-  const projects = [
-    { id: 1, name: "Website Redesign", client: "Acme Corp", progress: 75, status: "active" as const, team: ["Sarah", "Mike"] },
-    { id: 2, name: "Mobile App Dev", client: "TechStart", progress: 40, status: "active" as const, team: ["John", "Lisa"] },
-    { id: 3, name: "Brand Identity", client: "Nova Inc", progress: 90, status: "pending" as const, team: ["Emma"] },
-  ];
-
-  const upcomingTasks = [
-    { id: 1, title: "Follow up with TechStart", due: "Today, 2:00 PM", priority: "high" },
-    { id: 2, title: "Send proposal to Acme Corp", due: "Tomorrow, 10:00 AM", priority: "medium" },
-    { id: 3, title: "Team standup meeting", due: "Today, 4:00 PM", priority: "low" },
-  ];
+  // Empty arrays - will be populated from API when backend endpoints are implemented
+  const activities: any[] = [];
+  const projects: any[] = [];
+  const upcomingTasks: any[] = [];
 
   return (
     <div className="min-h-screen bg-soft-white dark:bg-background">
@@ -91,32 +76,28 @@ export function Dashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
             <MetricCard
               title="Today Revenue"
-              value={formatINRCompact(3700)}
-              change={{ value: 12.5, positive: true }}
+              value="—"
               icon={DollarSign}
-              subtitle={`Period: ${formatINRCompact(8500)} this week`}
+              subtitle="No data available"
               highlight={true}
             />
             <MetricCard
               title="Weekly Sales"
-              value={formatINRCompact(6500)}
-              change={{ value: 8.2, positive: true }}
+              value="—"
               icon={Activity}
-              subtitle="Available soon"
+              subtitle="No data available"
             />
             <MetricCard
               title="Monthly Target"
-              value={formatINRCompact(8500)}
-              change={{ value: 5.1, positive: true }}
+              value="—"
               icon={Target}
-              subtitle="On track"
+              subtitle="No data available"
             />
             <MetricCard
               title="Active Leads"
-              value="48"
-              change={{ value: 8.2, positive: true }}
+              value="—"
               icon={Users}
-              subtitle="12 new this week"
+              subtitle="No data available"
             />
           </div>
 
@@ -285,7 +266,13 @@ export function Dashboard() {
                 </Button>
               </div>
               <div className="space-y-4">
-                {projects.map((project) => (
+                {projects.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-sm">No active projects</p>
+                    <p className="text-xs mt-1">Projects will appear here</p>
+                  </div>
+                ) : (
+                  projects.map((project) => (
                   <div key={project.id} className="p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
@@ -307,7 +294,8 @@ export function Dashboard() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -330,7 +318,13 @@ export function Dashboard() {
                 </div>
               </div>
               <div className="space-y-3">
-                {activities.map((activity) => {
+                {activities.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-sm">No recent activity</p>
+                    <p className="text-xs mt-1">Activity will appear here</p>
+                  </div>
+                ) : (
+                  activities.map((activity) => {
                   const Icon = activity.icon;
                   return (
                     <div key={activity.id} className="flex gap-3 p-3 rounded-xl hover:bg-muted/30 transition-colors">
@@ -344,7 +338,8 @@ export function Dashboard() {
                       </div>
                     </div>
                   );
-                })}
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -358,7 +353,13 @@ export function Dashboard() {
               </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {upcomingTasks.map((task) => (
+              {upcomingTasks.length === 0 ? (
+                <div className="col-span-3 text-center py-8 text-muted-foreground">
+                  <p className="text-sm">No upcoming tasks</p>
+                  <p className="text-xs mt-1">Tasks will appear here</p>
+                </div>
+              ) : (
+                upcomingTasks.map((task) => (
                 <div key={task.id} className="p-4 rounded-xl border border-border hover:border-muted-foreground/20 transition-colors">
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-5 h-5 rounded border-2 border-muted-foreground/40 flex-shrink-0 mt-0.5" />
@@ -382,7 +383,8 @@ export function Dashboard() {
                     </span>
                   </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>

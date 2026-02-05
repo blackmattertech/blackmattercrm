@@ -53,10 +53,10 @@ export const authenticate = async (
       });
     }
 
-    // Get user profile with role
+    // Get user profile with role - only select needed fields
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('*')
+      .select('id, email, phone, role, full_name, is_active, approval_status')
       .eq('id', user.id)
       .single();
 

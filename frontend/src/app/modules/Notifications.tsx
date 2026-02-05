@@ -5,13 +5,7 @@ import { Bell, CheckCircle2, AlertCircle, Info, DollarSign, Users } from "lucide
 import { formatINRCompact } from "../utils/formatters";
 
 export function Notifications() {
-  const notifications = [
-    { id: 1, type: "payment", title: "Payment received", message: `Invoice INV-2024-001 has been paid - ${formatINRCompact(5200)}`, time: "2 mins ago", read: false, icon: DollarSign, iconColor: "text-emerald-600" },
-    { id: 2, type: "alert", title: "Payment overdue", message: "Invoice INV-2024-056 is now 5 days overdue", time: "1 hour ago", read: false, icon: AlertCircle, iconColor: "text-red-600" },
-    { id: 3, type: "success", title: "Project completed", message: "Website Redesign has been marked as complete", time: "3 hours ago", read: false, icon: CheckCircle2, iconColor: "text-emerald-600" },
-    { id: 4, type: "info", title: "New lead added", message: "John Smith from Tech Corp has been added to CRM", time: "5 hours ago", read: true, icon: Users, iconColor: "text-foreground" },
-    { id: 5, type: "info", title: "Team member available", message: "Sarah Johnson is now available for new projects", time: "1 day ago", read: true, icon: Info, iconColor: "text-foreground" },
-  ];
+  const notifications: any[] = []; // Empty - will be populated from API when notifications system is implemented
 
   return (
     <div className="min-h-screen bg-soft-white dark:bg-background">
@@ -27,7 +21,14 @@ export function Notifications() {
       <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="w-full space-y-6 lg:space-y-8">
           <div className="w-full max-w-4xl mx-auto space-y-3">
-            {notifications.map((notification) => {
+            {notifications.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Bell className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No notifications</p>
+                <p className="text-xs mt-2">Notifications will appear here</p>
+              </div>
+            ) : (
+              notifications.map((notification) => {
               const Icon = notification.icon;
               return (
                 <div
@@ -53,7 +54,7 @@ export function Notifications() {
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         </div>
       </div>

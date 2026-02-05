@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { StatusBadge } from "../components/StatusBadge";
 import { MetricCard } from "../components/MetricCard";
 import { Button } from "../components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import { DollarSign, FileText, TrendingUp, TrendingDown, Download, Eye, Send, ArrowLeft, CheckCircle2, Plus, Trash2 } from "lucide-react";
-import { formatINR, formatINRCompact, formatIndianDate } from "../utils/formatters";
+import { formatINR, formatINRCompact, formatDate } from "../utils/formatters";
+import { accountsApi } from "../../lib/api";
+import { Loader2 } from "lucide-react";
 
 interface Invoice {
   id: string;
@@ -38,28 +40,32 @@ export function Accounts() {
   const [selectedTab, setSelectedTab] = useState("invoices");
   const [currentView, setCurrentView] = useState<"main" | "income" | "cashflow" | "trial" | "capital" | "new-invoice" | "new-receipt" | "new-payment">("main");
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
+  const [directors, setDirectors] = useState<any[]>([]);
+  const [directorsLoading, setDirectorsLoading] = useState(false);
 
-  const invoices: Invoice[] = [
-    { id: "INV-2024-001", client: "Acme Corp", amount: 50000, status: "paid", dueDate: "2024-01-15", issueDate: "2024-01-01", service: "Website Design" },
-    { id: "INV-2024-002", client: "TechStart", amount: 85000, status: "unpaid", dueDate: "2024-02-10", issueDate: "2024-01-25", service: "App Development" },
-    { id: "INV-2024-003", client: "Design Co", amount: 32000, status: "overdue", dueDate: "2024-01-20", issueDate: "2024-01-05", service: "Brand Identity" },
-    { id: "INV-2024-004", client: "Nova Inc", amount: 120000, status: "paid", dueDate: "2024-02-20", issueDate: "2024-02-01", service: "Enterprise Solution" },
-    { id: "INV-2024-005", client: "StartUp Labs", amount: 45000, status: "paid", dueDate: "2024-01-18", issueDate: "2024-01-03", service: "Consulting" },
-  ];
+  // Empty arrays - will be populated from API when accounts endpoints are implemented
+  const invoices: Invoice[] = [];
+  const expenses: Expense[] = [];
+  const incomeDetails: ReportDetail[] = [];
 
-  const expenses: Expense[] = [
-    { id: "EXP-001", category: "Software", vendor: "Adobe", amount: 5990, date: "2024-01-05", status: "paid", description: "Creative Cloud License" },
-    { id: "EXP-002", category: "Marketing", vendor: "Google Ads", amount: 24000, date: "2024-01-10", status: "paid", description: "Ad Campaign" },
-    { id: "EXP-003", category: "Office", vendor: "Supplies Co", amount: 3400, date: "2024-01-15", status: "paid", description: "Office Supplies" },
-    { id: "EXP-004", category: "Salary", vendor: "Freelance Team", amount: 125000, date: "2024-01-30", status: "paid", description: "Monthly Payroll" },
-    { id: "EXP-005", category: "Infrastructure", vendor: "AWS", amount: 12500, date: "2024-01-20", status: "paid", description: "Cloud Services" },
-  ];
+  // Load directors on mount
+  useEffect(() => {
+    loadDirectors();
+  }, []);
 
-  const incomeDetails: ReportDetail[] = [
-    { date: "01/01/2024", client: "Acme Corp", service: "Website Design", amount: 50000 },
-    { date: "18/01/2024", client: "StartUp Labs", service: "Consulting", amount: 45000 },
-    { date: "20/02/2024", client: "Nova Inc", service: "Enterprise Solution", amount: 120000 },
-  ];
+  const loadDirectors = async () => {
+    setDirectorsLoading(true);
+    try {
+      const response = await accountsApi.getDirectors();
+      if (response.success && response.data) {
+        setDirectors(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load directors:', error);
+    } finally {
+      setDirectorsLoading(false);
+    }
+  };
 
   const expenseDetails = expenses.filter(e => e.status === "paid");
 
@@ -70,8 +76,7 @@ export function Accounts() {
     { account: "Office Equipment", drAmount: 50000, crAmount: 0, group: "Assets" },
     { account: "Sundry Creditors", drAmount: 0, crAmount: 15000, group: "Liabilities" },
     { account: "Outstanding Expenses", drAmount: 0, crAmount: 8500, group: "Liabilities" },
-    { account: "Director 1 - Rajesh Kumar - Capital", drAmount: 0, crAmount: 995000, group: "Capital", director: "Rajesh Kumar" },
-    { account: "Director 2 - Priya Sharma - Capital", drAmount: 0, crAmount: 730000, group: "Capital", director: "Priya Sharma" },
+    // Director capital accounts will be dynamically generated from directors data
     { account: "Service Revenue", drAmount: 0, crAmount: 332000, group: "Income" },
     { account: "Consulting Income", drAmount: 0, crAmount: 45000, group: "Income" },
     { account: "Salary & Wages", drAmount: 125000, crAmount: 0, group: "Expenses" },
@@ -88,58 +93,21 @@ export function Accounts() {
   const totalExpenses = expenseDetails.reduce((sum, item) => sum + item.amount, 0);
   const netIncome = totalRevenue - totalExpenses;
 
-  const cashInflows = [
-    { date: "01/01/2024", source: "Acme Corp - Website Design", amount: 50000 },
-    { date: "18/01/2024", source: "StartUp Labs - Consulting", amount: 45000 },
-    { date: "20/02/2024", source: "Nova Inc - Enterprise Solution", amount: 120000 },
-  ];
-
-  const cashOutflows = [
-    { date: "05/01/2024", purpose: "Adobe - Creative Cloud License", amount: 5990 },
-    { date: "10/01/2024", purpose: "Google Ads - Marketing Campaign", amount: 24000 },
-    { date: "15/01/2024", purpose: "Supplies Co - Office Supplies", amount: 3400 },
-    { date: "20/01/2024", purpose: "AWS - Cloud Services", amount: 12500 },
-    { date: "30/01/2024", purpose: "Freelance Team - Payroll", amount: 125000 },
-  ];
-
-  const openingBalance = 85200;
+  // Empty arrays - will be populated from API when accounts endpoints are implemented
+  const cashInflows: any[] = [];
+  const cashOutflows: any[] = [];
+  
+  const openingBalance = 0;
   const totalCashIn = cashInflows.reduce((sum, item) => sum + item.amount, 0);
   const totalCashOut = cashOutflows.reduce((sum, item) => sum + item.amount, 0);
   const closingBalance = openingBalance + totalCashIn - totalCashOut;
 
-  // Capital Account Data for Directors/Partners
-  const directors = [
-    {
-      name: "Rajesh Kumar",
-      role: "Director 1",
-      openingCapital: 1000000,
-      additionalCapital: [
-        { date: "15/01/2024", amount: 200000, description: "Additional Investment" }
-      ],
-      drawings: [
-        { date: "10/01/2024", amount: 50000, description: "Personal Expense" },
-        { date: "25/01/2024", amount: 75000, description: "Monthly Drawing" },
-        { date: "05/02/2024", amount: 60000, description: "Personal Use" }
-      ]
-    },
-    {
-      name: "Priya Sharma",
-      role: "Director 2",
-      openingCapital: 800000,
-      additionalCapital: [
-        { date: "20/01/2024", amount: 150000, description: "Additional Investment" }
-      ],
-      drawings: [
-        { date: "12/01/2024", amount: 40000, description: "Personal Expense" },
-        { date: "28/01/2024", amount: 55000, description: "Monthly Drawing" }
-      ]
-    }
-  ];
+  // Directors are loaded from API via useEffect
 
-  const calculateDirectorBalance = (director: typeof directors[0]) => {
-    const additionalCapitalTotal = director.additionalCapital.reduce((sum, item) => sum + item.amount, 0);
-    const drawingsTotal = director.drawings.reduce((sum, item) => sum + item.amount, 0);
-    return director.openingCapital + additionalCapitalTotal - drawingsTotal;
+  const calculateDirectorBalance = (director: any) => {
+    const additionalCapitalTotal = (director.additionalCapital || []).reduce((sum: number, item: any) => sum + item.amount, 0);
+    const drawingsTotal = (director.drawings || []).reduce((sum: number, item: any) => sum + item.amount, 0);
+    return (director.openingCapital || 0) + additionalCapitalTotal - drawingsTotal;
   };
 
   // Full-page Income Statement View
@@ -215,7 +183,7 @@ export function Accounts() {
                   <tbody>
                     {expenseDetails.map((item, idx) => (
                       <tr key={idx} className="border-b hover:bg-muted/50 transition-colors">
-                        <td className="p-4 text-sm">{formatIndianDate(item.date)}</td>
+                        <td className="p-4 text-sm">{formatDate(item.date)}</td>
                         <td className="p-4 text-sm">{item.category}</td>
                         <td className="p-4 text-sm text-muted-foreground">{item.description}</td>
                         <td className="p-4 text-sm text-right font-medium">{formatINR(item.amount)}</td>
@@ -318,9 +286,18 @@ export function Accounts() {
                     </tr>
                   </thead>
                   <tbody>
+                    {cashOutflows.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="p-12 text-center text-muted-foreground">
+                          <p>No cash outflows found</p>
+                          <p className="text-xs mt-2">Cash outflows will appear here once they are recorded</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      <>
                     {cashOutflows.map((item, idx) => (
                       <tr key={idx} className="border-b hover:bg-muted/50 transition-colors">
-                        <td className="p-4 text-sm">{item.date}</td>
+                            <td className="p-4 text-sm">{formatDate(item.date)}</td>
                         <td className="p-4 text-sm">{item.purpose}</td>
                         <td className="p-4 text-sm text-right font-medium text-red-600">-{formatINR(item.amount)}</td>
                       </tr>
@@ -329,6 +306,8 @@ export function Accounts() {
                       <td colSpan={2} className="p-4 text-sm">Total Cash Outflows</td>
                       <td className="p-4 text-sm text-right text-red-600">-{formatINR(totalCashOut)}</td>
                     </tr>
+                      </>
+                    )}
                   </tbody>
                 </table>
                 </div>
@@ -363,7 +342,7 @@ export function Accounts() {
                 </Button>
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-medium">Trial Balance</h1>
-                  <p className="text-sm text-muted-foreground">As on {formatIndianDate(new Date().toISOString())}</p>
+                  <p className="text-sm text-muted-foreground">As on {formatDate(new Date().toISOString())}</p>
                 </div>
               </div>
               <Button className="rounded-xl">
@@ -512,7 +491,7 @@ export function Accounts() {
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
                 <div>
-                  <h1 className="text-2xl lg:text-3xl font-medium">Partners' Capital Account</h1>
+                  <h1 className="text-2xl lg:text-3xl font-medium">Directors' Capital Account</h1>
                   <p className="text-sm text-muted-foreground">Capital, Drawings & Balance Statement</p>
                 </div>
               </div>
@@ -534,7 +513,7 @@ export function Accounts() {
                 <table className="w-full">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th className="p-4 text-left text-sm font-medium">Partner/Director Name</th>
+                    <th className="p-4 text-left text-sm font-medium">Director Name</th>
                     <th className="p-4 text-left text-sm font-medium">Role</th>
                     <th className="p-4 text-right text-sm font-medium">Opening Capital (₹)</th>
                     <th className="p-4 text-right text-sm font-medium">Additional Capital (₹)</th>
@@ -543,16 +522,41 @@ export function Accounts() {
                   </tr>
                 </thead>
                 <tbody>
+                  {directorsLoading ? (
+                    <tr>
+                      <td colSpan={6} className="p-12 text-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">Loading directors...</p>
+                      </td>
+                    </tr>
+                  ) : directors.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-12 text-center text-muted-foreground">
+                        <p>No directors found</p>
+                        <p className="text-xs mt-2">Directors will appear here once they are marked as directors by admin</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
                   {directors.map((director, idx) => {
-                    const additionalCapitalTotal = director.additionalCapital.reduce((sum, item) => sum + item.amount, 0);
-                    const drawingsTotal = director.drawings.reduce((sum, item) => sum + item.amount, 0);
+                        const additionalCapitalTotal = (director.additionalCapital || []).reduce((sum: number, item: any) => sum + item.amount, 0);
+                        const drawingsTotal = (director.drawings || []).reduce((sum: number, item: any) => sum + item.amount, 0);
                     const closingBalance = calculateDirectorBalance(director);
                     
                     return (
-                      <tr key={idx} className="border-b hover:bg-muted/50 transition-colors">
-                        <td className="p-4 text-sm font-medium">{director.name}</td>
-                        <td className="p-4 text-sm text-muted-foreground">{director.role}</td>
-                        <td className="p-4 text-sm text-right font-medium">{formatINR(director.openingCapital)}</td>
+                          <tr key={director.id || idx} className="border-b hover:bg-muted/50 transition-colors">
+                            <td className="p-4 text-sm font-medium">
+                              <div>
+                                <div>{director.name}</div>
+                                {director.equity_ratio > 0 && (
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {director.equity_ratio}% Equity
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-4 text-sm text-muted-foreground">{director.role || 'Director'}</td>
+                            <td className="p-4 text-sm text-right font-medium">{formatINR(director.openingCapital || 0)}</td>
                         <td className="p-4 text-sm text-right font-medium text-emerald-600">
                           {additionalCapitalTotal > 0 ? `+${formatINR(additionalCapitalTotal)}` : '-'}
                         </td>
@@ -568,30 +572,50 @@ export function Accounts() {
                   <tr className="bg-primary/10 font-bold border-t-2">
                     <td colSpan={2} className="p-4 text-sm">TOTAL</td>
                     <td className="p-4 text-sm text-right">
-                      {formatINR(directors.reduce((sum, d) => sum + d.openingCapital, 0))}
+                          {formatINR(directors.reduce((sum, d) => sum + (d.openingCapital || 0), 0))}
                     </td>
                     <td className="p-4 text-sm text-right">
-                      {formatINR(directors.reduce((sum, d) => sum + d.additionalCapital.reduce((s, i) => s + i.amount, 0), 0))}
+                          {formatINR(directors.reduce((sum, d) => sum + ((d.additionalCapital || []).reduce((s: number, i: any) => s + i.amount, 0)), 0))}
                     </td>
                     <td className="p-4 text-sm text-right">
-                      {formatINR(directors.reduce((sum, d) => sum + d.drawings.reduce((s, i) => s + i.amount, 0), 0))}
+                          {formatINR(directors.reduce((sum, d) => sum + ((d.drawings || []).reduce((s: number, i: any) => s + i.amount, 0)), 0))}
                     </td>
                     <td className="p-4 text-sm text-right">
                       {formatINR(directors.reduce((sum, d) => sum + calculateDirectorBalance(d), 0))}
                     </td>
                   </tr>
+                    </>
+                  )}
                 </tbody>
               </table>
               </div>
             </div>
 
             {/* Detailed Breakdown for Each Director */}
-            {directors.map((director, directorIdx) => (
-              <div key={directorIdx} className="space-y-4">
+            {directorsLoading ? (
+              <div className="bg-card border border-border rounded-2xl p-12 text-center">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">Loading directors...</p>
+              </div>
+            ) : directors.length === 0 ? (
+              <div className="bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground">
+                <p>No directors found</p>
+                <p className="text-xs mt-2">Directors will appear here once they are marked as directors by admin</p>
+              </div>
+            ) : (
+              directors.map((director) => (
+              <div key={director.id} className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-xl">{director.name} - Capital Account</h3>
-                    <p className="text-sm text-muted-foreground">{director.role}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-sm text-muted-foreground">{director.role || 'Director'}</p>
+                      {director.equity_ratio > 0 && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                          {director.equity_ratio}% Equity
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">Current Balance</p>
@@ -625,7 +649,7 @@ export function Accounts() {
                                   <div key={idx} className="flex justify-between items-start py-2 px-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/10">
                                     <div>
                                       <p className="text-sm">{capital.description}</p>
-                                      <p className="text-xs text-muted-foreground">{capital.date}</p>
+                                      <p className="text-xs text-muted-foreground">{formatDate(capital.date)}</p>
                                     </div>
                                     <span className="text-sm font-medium text-emerald-600">
                                       +{formatINR(capital.amount)}
@@ -671,7 +695,7 @@ export function Accounts() {
                                   <div key={idx} className="flex justify-between items-start py-2 px-3 rounded-lg bg-red-50 dark:bg-red-900/10">
                                     <div>
                                       <p className="text-sm">{drawing.description}</p>
-                                      <p className="text-xs text-muted-foreground">{drawing.date}</p>
+                                      <p className="text-xs text-muted-foreground">{formatDate(drawing.date)}</p>
                                     </div>
                                     <span className="text-sm font-medium text-red-600">
                                       -{formatINR(drawing.amount)}
@@ -707,13 +731,13 @@ export function Accounts() {
                     <div className="flex justify-between text-sm">
                       <span>Add: Additional Capital:</span>
                       <span className="font-medium text-emerald-600">
-                        +{formatINR(director.additionalCapital.reduce((sum, item) => sum + item.amount, 0))}
+                        +{formatINR((director.additionalCapital || []).reduce((sum: number, item: any) => sum + item.amount, 0))}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Less: Drawings:</span>
                       <span className="font-medium text-red-600">
-                        -{formatINR(director.drawings.reduce((sum, item) => sum + item.amount, 0))}
+                        -{formatINR((director.drawings || []).reduce((sum: number, item: any) => sum + item.amount, 0))}
                       </span>
                     </div>
                     <div className="flex justify-between pt-3 border-t-2 border-primary">
@@ -725,7 +749,8 @@ export function Accounts() {
                   </div>
                 </div>
               </div>
-            ))}
+            ))
+            )}
           </div>
         </div>
       </div>
@@ -1143,34 +1168,28 @@ export function Accounts() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
             <MetricCard
               title="Total Revenue"
-              value={formatINR(totalRevenue)}
-              change={{ value: 12.5, positive: true }}
+              value="—"
               icon={DollarSign}
-              iconColor="text-emerald-600"
-              subtitle="This month"
+              subtitle="No data available"
+              highlight={true}
             />
             <MetricCard
               title="Outstanding"
-              value={formatINR(117000)}
+              value="—"
               icon={FileText}
-              iconColor="text-amber-600"
-              subtitle="2 unpaid invoices"
+              subtitle="No data available"
             />
             <MetricCard
               title="Expenses"
-              value={formatINR(totalExpenses)}
-              change={{ value: 5.2, positive: false }}
+              value="—"
               icon={TrendingDown}
-              iconColor="text-red-600"
-              subtitle="This month"
+              subtitle="No data available"
             />
             <MetricCard
               title="Net Profit"
-              value={formatINR(netIncome)}
-              change={{ value: 18.3, positive: true }}
+              value="—"
               icon={TrendingUp}
-              iconColor="text-emerald-600"
-              subtitle="This month"
+              subtitle="No data available"
             />
           </div>
 
@@ -1210,8 +1229,8 @@ export function Accounts() {
                         <td className="p-4">
                           <span className="text-sm font-medium">{formatINR(invoice.amount)}</span>
                         </td>
-                        <td className="p-4 text-sm text-muted-foreground">{formatIndianDate(invoice.issueDate)}</td>
-                        <td className="p-4 text-sm text-muted-foreground">{formatIndianDate(invoice.dueDate)}</td>
+                        <td className="p-4 text-sm text-muted-foreground">{formatDate(invoice.issueDate)}</td>
+                        <td className="p-4 text-sm text-muted-foreground">{formatDate(invoice.dueDate)}</td>
                         <td className="p-4">
                           <StatusBadge status={invoice.status} />
                         </td>
@@ -1405,7 +1424,7 @@ export function Accounts() {
                         <td className="p-4">
                           <span className="text-sm font-medium">{formatINR(expense.amount)}</span>
                         </td>
-                        <td className="p-4 text-sm text-muted-foreground">{formatIndianDate(expense.date)}</td>
+                        <td className="p-4 text-sm text-muted-foreground">{formatDate(expense.date)}</td>
                         <td className="p-4">
                           <StatusBadge status={expense.status} />
                         </td>

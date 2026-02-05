@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { StatusBadge } from "../components/StatusBadge";
 import { Button } from "../components/ui/button";
@@ -36,24 +36,34 @@ import {
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../components/ui/dialog";
-import { formatINR, formatINRCompact, formatIndianDate } from "../utils/formatters";
+import { formatINR, formatINRCompact, formatDate } from "../utils/formatters";
+import { MetricCard } from "../components/MetricCard";
+import { crmApi, usersApi } from "../../lib/api";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface Lead {
-  id: number;
+  id: string;
   name: string;
-  company: string;
-  email: string;
-  phone: string;
+  company?: string;
+  email?: string;
+  phone?: string;
   value: number;
   status: "new" | "contacted" | "qualified" | "proposal" | "negotiation" | "won" | "lost";
-  stage: string;
-  lastContact: string;
-  assignedTo: string;
+  stage?: string;
+  lastContact?: string;
+  assignedTo?: string;
+  assigned_to?: string;
+  assigned_to_name?: string;
   projectType?: string;
+  project_type?: string;
   deadline?: string;
   progress?: number;
   quality?: "excellent" | "good" | "average" | "poor";
   timeline?: "on-track" | "at-risk" | "delayed";
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface ProjectDetail {
@@ -86,123 +96,120 @@ export function CRM() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+  const [teams, setTeams] = useState<any[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(false);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  
+  // Form state for creating lead
+  const [leadForm, setLeadForm] = useState({
+    name: "",
+    company: "",
+    email: "",
+    phone: "",
+    value: 0,
+    status: "new" as Lead["status"],
+    stage: "",
+    notes: "",
+    assigned_to: "",
+  });
+  const [creatingLead, setCreatingLead] = useState(false);
 
-  const leads: Lead[] = [
-    { 
-      id: 1, 
-      name: "John Smith", 
-      company: "Tech Corp", 
-      email: "john@techcorp.com", 
-      phone: "+91 98765 43210", 
-      value: 500000, 
-      status: "won", 
-      stage: "Project Started", 
-      lastContact: "2 hours ago", 
-      assignedTo: "Sarah",
-      projectType: "Website Development",
-      deadline: "2024-03-15",
-      progress: 65,
-      quality: "excellent",
-      timeline: "on-track"
-    },
-    { 
-      id: 2, 
-      name: "Emma Wilson", 
-      company: "Design Co", 
-      email: "emma@designco.com", 
-      phone: "+91 98765 43211", 
-      value: 350000, 
-      status: "won", 
-      stage: "In Development", 
-      lastContact: "1 day ago", 
-      assignedTo: "Mike",
-      projectType: "Mobile App",
-      deadline: "2024-04-20",
-      progress: 40,
-      quality: "good",
-      timeline: "on-track"
-    },
-    { 
-      id: 3, 
-      name: "Michael Brown", 
-      company: "Startup Inc", 
-      email: "mike@startup.com", 
-      phone: "+91 98765 43212", 
-      value: 750000, 
-      status: "won", 
-      stage: "Design Phase", 
-      lastContact: "3 hours ago", 
-      assignedTo: "Sarah",
-      projectType: "E-commerce Platform",
-      deadline: "2024-05-10",
-      progress: 25,
-      quality: "good",
-      timeline: "at-risk"
-    },
-    { 
-      id: 4, 
-      name: "Lisa Anderson", 
-      company: "Enterprise Ltd", 
-      email: "lisa@enterprise.com", 
-      phone: "+91 98765 43213", 
-      value: 1200000, 
-      status: "negotiation", 
-      stage: "Contract Review", 
-      lastContact: "Just now", 
-      assignedTo: "John" 
-    },
-    { 
-      id: 5, 
-      name: "Robert Chen", 
-      company: "Media House", 
-      email: "robert@mediahouse.com", 
-      phone: "+91 98765 43214", 
-      value: 450000, 
-      status: "proposal", 
-      stage: "Proposal Sent", 
-      lastContact: "5 hours ago", 
-      assignedTo: "Mike" 
-    },
-  ];
+  // Load leads on mount
+  useEffect(() => {
+    loadLeads();
+    loadTeams();
+  }, []);
 
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: 1,
-      title: "Complete homepage design",
-      description: "Design the homepage according to client specifications",
-      assignedTo: "Sarah",
-      linkedLead: 1,
-      linkedLeadName: "Tech Corp - Website Development",
-      status: "in-progress",
-      priority: "high",
-      dueDate: "2024-02-15",
-      progress: 70
-    },
-    {
-      id: 2,
-      title: "API integration",
-      description: "Integrate third-party payment gateway",
-      assignedTo: "Mike",
-      linkedLead: 2,
-      linkedLeadName: "Design Co - Mobile App",
-      status: "in-progress",
-      priority: "urgent",
-      dueDate: "2024-02-10",
-      progress: 45
-    },
-    {
-      id: 3,
-      title: "Database schema design",
-      description: "Design and implement database structure",
-      assignedTo: "John",
-      linkedLead: 3,
-      linkedLeadName: "Startup Inc - E-commerce Platform",
-      status: "completed",
-      priority: "medium",
-      dueDate: "2024-02-08",
-      progress: 100
-    },
-  ]);
+  const loadLeads = async () => {
+    setLeadsLoading(true);
+    try {
+      const response = await crmApi.getLeads();
+      if (response.success && response.data) {
+        // Map database leads to frontend format
+        const mappedLeads = response.data.map((lead: any) => ({
+          ...lead,
+          assignedTo: lead.assigned_to_name || lead.assigned_to || "",
+          lastContact: lead.updated_at || lead.created_at,
+          projectType: lead.project_type,
+        }));
+        setLeads(mappedLeads);
+      }
+    } catch (error) {
+      console.error('Failed to load leads:', error);
+      toast.error('Failed to load leads');
+    } finally {
+      setLeadsLoading(false);
+    }
+  };
+
+  const loadTeams = async () => {
+    setTeamsLoading(true);
+    try {
+      const response = await usersApi.getAllUsers();
+      if (response.success && response.data) {
+        // Filter only active and approved users
+        const activeUsers = response.data.filter((user: any) => 
+          user.is_active && user.approval_status === 'approved'
+        );
+        setTeams(activeUsers);
+      }
+    } catch (error) {
+      console.error('Failed to load teams:', error);
+    } finally {
+      setTeamsLoading(false);
+    }
+  };
+
+  const handleCreateLead = async () => {
+    if (!leadForm.name) {
+      toast.error("Name is required");
+      return;
+    }
+
+    setCreatingLead(true);
+    try {
+      const leadData = {
+        name: leadForm.name,
+        company: leadForm.company || undefined,
+        email: leadForm.email || undefined,
+        phone: leadForm.phone || undefined,
+        value: leadForm.value || 0,
+        status: leadForm.status,
+        stage: leadForm.stage || undefined,
+        notes: leadForm.notes || undefined,
+        assigned_to: leadForm.assigned_to || undefined,
+      };
+
+      const response = await crmApi.createLead(leadData);
+      if (response.success && response.data) {
+        toast.success("Lead created successfully!");
+        setShowCreateModal(false);
+        // Reset form
+        setLeadForm({
+          name: "",
+          company: "",
+          email: "",
+          phone: "",
+          value: 0,
+          status: "new",
+          stage: "",
+          notes: "",
+          assigned_to: "",
+        });
+        // Reload leads to show the new one
+        await loadLeads();
+      } else {
+        toast.error(response.error || "Failed to create lead");
+      }
+    } catch (error: any) {
+      console.error('Failed to create lead:', error);
+      toast.error(error?.response?.data?.error || "Failed to create lead");
+    } finally {
+      setCreatingLead(false);
+    }
+  };
 
   const projectDetails: { [key: number]: ProjectDetail } = {
     1: {
@@ -548,50 +555,31 @@ export function CRM() {
         <div className="w-full space-y-6 lg:space-y-8">
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
-            <div className="bg-card border border-border rounded-2xl p-4 lg:p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-accent/20 dark:bg-accent/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-accent-foreground" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">Total Leads</p>
-                  <p className="text-xl font-semibold">{leads.length}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-card border border-border rounded-2xl p-4 lg:p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">Active Projects</p>
-                  <p className="text-xl font-semibold">{activeProjects.length}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-card border border-border rounded-2xl p-4 lg:p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-accent/20 dark:bg-accent/10 flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-accent-foreground" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">Pipeline Value</p>
-                  <p className="text-lg font-semibold">{formatINRCompact(leads.reduce((sum, l) => sum + l.value, 0))}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-card border border-border rounded-2xl p-4 lg:p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-accent/20 dark:bg-accent/10 flex items-center justify-center">
-                  <Activity className="w-5 h-5 text-accent-foreground" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">Active Tasks</p>
-                  <p className="text-xl font-semibold">{tasks.filter(t => t.status !== "completed").length}</p>
-                </div>
-              </div>
-            </div>
+            <MetricCard
+              title="Total Leads"
+              value="—"
+              icon={Users}
+              subtitle="No data available"
+              highlight={true}
+            />
+            <MetricCard
+              title="Active Projects"
+              value="—"
+              icon={CheckCircle2}
+              subtitle="No data available"
+            />
+            <MetricCard
+              title="Pipeline Value"
+              value="—"
+              icon={DollarSign}
+              subtitle="No data available"
+            />
+            <MetricCard
+              title="Active Tasks"
+              value="—"
+              icon={Activity}
+              subtitle="No data available"
+            />
           </div>
 
           <Tabs value={view} onValueChange={(v) => setView(v as any)}>
@@ -619,7 +607,15 @@ export function CRM() {
                       </tr>
                     </thead>
                     <tbody>
-                      {leads.map((lead) => (
+                      {leads.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="p-12 text-center text-muted-foreground">
+                            <p className="text-sm">No leads found</p>
+                            <p className="text-xs mt-2">Leads will appear here once they are added</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        leads.map((lead) => (
                         <tr 
                           key={lead.id} 
                           className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
@@ -663,7 +659,9 @@ export function CRM() {
                           <td className="p-4">
                             <StatusBadge status={lead.status as any} />
                           </td>
-                          <td className="p-4 text-sm">{lead.assignedTo}</td>
+                          <td className="p-4 text-sm">
+                            {lead.assigned_to_name || lead.assignedTo || 'Unassigned'}
+                          </td>
                           <td className="p-4 text-sm text-muted-foreground">{lead.lastContact}</td>
                           <td className="p-4">
                             <DropdownMenu>
@@ -689,7 +687,8 @@ export function CRM() {
                             </DropdownMenu>
                           </td>
                         </tr>
-                      ))}
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -727,7 +726,7 @@ export function CRM() {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <div className="w-6 h-6 rounded-full bg-gradient-to-br from-foreground to-foreground/80 flex items-center justify-center text-xs text-background font-medium">
-                                  {lead.assignedTo.charAt(0)}
+                                  {(lead.assigned_to_name || lead.assignedTo || 'U').charAt(0)}
                                 </div>
                               </div>
                               <span className="text-xs text-muted-foreground">{lead.lastContact}</span>
@@ -771,7 +770,7 @@ export function CRM() {
                         </div>
                         <div className="px-3 py-1 rounded-lg bg-muted text-xs">
                           <span className="text-muted-foreground">Deadline:</span>
-                          <span className="font-medium ml-1">{project.deadline ? formatIndianDate(project.deadline) : 'N/A'}</span>
+                          <span className="font-medium ml-1">{project.deadline ? formatDate(project.deadline) : 'N/A'}</span>
                         </div>
                       </div>
                     </div>
@@ -872,35 +871,72 @@ export function CRM() {
             <DialogTitle>Add New Lead</DialogTitle>
             <DialogDescription>Create a new lead in the sales pipeline.</DialogDescription>
           </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); handleCreateLead(); }}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" placeholder="John Smith" className="rounded-xl" />
+                  <Label htmlFor="name">Full Name *</Label>
+                  <Input 
+                    id="name" 
+                    placeholder="John Smith" 
+                    className="rounded-xl"
+                    value={leadForm.name}
+                    onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })}
+                    required
+                  />
               </div>
               <div>
                 <Label htmlFor="company">Company</Label>
-                <Input id="company" placeholder="Tech Corp" className="rounded-xl" />
+                  <Input 
+                    id="company" 
+                    placeholder="Tech Corp" 
+                    className="rounded-xl"
+                    value={leadForm.company}
+                    onChange={(e) => setLeadForm({ ...leadForm, company: e.target.value })}
+                  />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="john@techcorp.com" className="rounded-xl" />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="john@techcorp.com" 
+                    className="rounded-xl"
+                    value={leadForm.email}
+                    onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}
+                  />
               </div>
               <div>
                 <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" placeholder="+91 98765 43210" className="rounded-xl" />
+                  <Input 
+                    id="phone" 
+                    placeholder="+91 98765 43210" 
+                    className="rounded-xl"
+                    value={leadForm.phone}
+                    onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}
+                  />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="value">Deal Value (₹)</Label>
-                <Input id="value" type="number" placeholder="500000" className="rounded-xl" />
+                  <Input 
+                    id="value" 
+                    type="number" 
+                    placeholder="500000" 
+                    className="rounded-xl"
+                    value={leadForm.value || ""}
+                    onChange={(e) => setLeadForm({ ...leadForm, value: parseFloat(e.target.value) || 0 })}
+                  />
               </div>
               <div>
                 <Label htmlFor="status">Status</Label>
-                <Select>
+                  <Select 
+                    value={leadForm.status}
+                    onValueChange={(value) => setLeadForm({ ...leadForm, status: value as Lead["status"] })}
+                  >
                   <SelectTrigger className="rounded-xl">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
@@ -908,19 +944,98 @@ export function CRM() {
                     <SelectItem value="new">New</SelectItem>
                     <SelectItem value="contacted">Contacted</SelectItem>
                     <SelectItem value="qualified">Qualified</SelectItem>
+                      <SelectItem value="proposal">Proposal</SelectItem>
+                      <SelectItem value="negotiation">Negotiation</SelectItem>
+                      <SelectItem value="won">Won</SelectItem>
+                      <SelectItem value="lost">Lost</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
+              <div>
+                <Label htmlFor="stage">Stage</Label>
+                <Input 
+                  id="stage" 
+                  placeholder="e.g., Initial Contact, Proposal Sent" 
+                  className="rounded-xl"
+                  value={leadForm.stage}
+                  onChange={(e) => setLeadForm({ ...leadForm, stage: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="assigned_to">Assigned To</Label>
+                <Select 
+                  value={leadForm.assigned_to}
+                  onValueChange={(value) => setLeadForm({ ...leadForm, assigned_to: value })}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="Select team member (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Unassigned</SelectItem>
+                    {teamsLoading ? (
+                      <SelectItem value="" disabled>Loading...</SelectItem>
+                    ) : (
+                      teams.map((member) => (
+                        <SelectItem key={member.id} value={member.id}>
+                          {member.full_name || member.email} ({member.role})
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
             <div>
               <Label htmlFor="notes">Notes</Label>
-              <Textarea id="notes" placeholder="Add any relevant information..." className="rounded-xl" />
+                <Textarea 
+                  id="notes" 
+                  placeholder="Add any relevant information..." 
+                  className="rounded-xl"
+                  value={leadForm.notes}
+                  onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })}
+                />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateModal(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={() => setShowCreateModal(false)} className="rounded-xl">Add Lead</Button>
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setLeadForm({
+                    name: "",
+                    company: "",
+                    email: "",
+                    phone: "",
+                    value: 0,
+                    status: "new",
+                    stage: "",
+                    notes: "",
+                    assigned_to: "",
+                  });
+                }} 
+                className="rounded-xl"
+                disabled={creatingLead}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                onClick={handleCreateLead} 
+                className="rounded-xl"
+                disabled={creatingLead || !leadForm.name}
+              >
+                {creatingLead ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Add Lead"
+                )}
+              </Button>
           </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -943,7 +1058,11 @@ export function CRM() {
                   <p className="text-muted-foreground">{selectedLead.company}</p>
                   <div className="flex gap-2 mt-2">
                     <StatusBadge status={selectedLead.status as any} />
-                    <span className="text-sm text-muted-foreground">• Assigned to {selectedLead.assignedTo}</span>
+                    {(selectedLead.assigned_to_name || selectedLead.assignedTo) && (
+                      <span className="text-sm text-muted-foreground">
+                        • Assigned to {selectedLead.assigned_to_name || selectedLead.assignedTo}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">
