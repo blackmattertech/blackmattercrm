@@ -160,7 +160,7 @@ export function TopHeader({ currentSection, onNavigate, notificationCount = 0, o
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full hover:bg-muted transition-colors">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-lime-green flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-logo-primary to-logo-light flex items-center justify-center">
                   <span className="text-xs font-semibold text-foreground">{getUserInitials()}</span>
                 </div>
                 <span className="hidden lg:inline-block text-sm font-medium">{getUserDisplayName()}</span>

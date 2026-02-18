@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useAuthStore } from "../../store/auth.store";
-import { Loader2, Mail, Lock, UserPlus } from "lucide-react";
+import { Loader2, Mail, Lock, UserPlus, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { testApiConnection } from "../../lib/api";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -13,8 +14,34 @@ export function LoginPage() {
   const [fullName, setFullName] = useState("");
   const [isSignup, setIsSignup] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<{ testing: boolean; success: boolean | null; message: string }>({
+    testing: false,
+    success: null,
+    message: '',
+  });
 
   const { login, signup, isLoading, error } = useAuthStore();
+
+  // Test backend connection on mount
+  useEffect(() => {
+    const testConnection = async () => {
+      setConnectionStatus({ testing: true, success: null, message: 'Testing connection...' });
+      const result = await testApiConnection();
+      setConnectionStatus({
+        testing: false,
+        success: result.success,
+        message: result.message,
+      });
+      
+      if (!result.success) {
+        console.error('[Login] Backend connection test failed:', result);
+      } else {
+        console.log('[Login] Backend connection test passed:', result);
+      }
+    };
+    
+    testConnection();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +105,35 @@ export function LoginPage() {
           <p className="text-sm text-muted-foreground">
             Sign in to your account
           </p>
+          {/* Connection Status */}
+          {connectionStatus.testing ? (
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {connectionStatus.message}
+            </div>
+          ) : connectionStatus.success === false ? (
+            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium mb-1">Connection Issue</p>
+                <p className="text-xs">{connectionStatus.message}</p>
+                <p className="text-xs mt-2">Make sure backend is running: <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">npm run dev</code></p>
+                <p className="text-xs mt-1">
+                  If backend is on different IP, configure it: <br/>
+                  <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded text-xs">
+                    localStorage.setItem('backend_ip', '192.168.1.39')
+                  </code>
+                  <br/>
+                  <span className="text-xs text-muted-foreground">Then refresh the page</span>
+                </p>
+              </div>
+            </div>
+          ) : connectionStatus.success === true ? (
+            <div className="mt-4 p-2 bg-logo-pale dark:bg-logo-primary/20 border border-logo-light dark:border-logo-light/50 rounded-lg text-xs text-logo-primary dark:text-logo-light flex items-center gap-2">
+              <div className="w-2 h-2 bg-logo-primary rounded-full"></div>
+              Backend connected
+            </div>
+          ) : null}
         </div>
 
         {/* Login/Signup Card */}

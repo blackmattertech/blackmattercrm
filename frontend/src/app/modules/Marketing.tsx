@@ -1,7 +1,7 @@
 import { PageHeader } from "../components/PageHeader";
 import { MetricCard } from "../components/MetricCard";
 import { Card } from "../components/ui/card";
-import { Eye, MousePointerClick, DollarSign, TrendingUp } from "lucide-react";
+import { Eye, MousePointerClick, Currency, TrendingUp } from "lucide-react";
 import { formatINR, formatDate } from "../utils/formatters";
 
 export function Marketing() {
@@ -24,28 +24,28 @@ export function Marketing() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
             <MetricCard
               title="Total Impressions"
-              value="—"
+              value="0"
               icon={Eye}
-              subtitle="No data available"
+              subtitle={campaigns.length === 0 ? "No campaigns yet" : `${campaigns.length} campaigns`}
               highlight={true}
             />
             <MetricCard
               title="Total Clicks"
-              value="—"
+              value="0"
               icon={MousePointerClick}
-              subtitle="No data available"
+              subtitle={campaigns.length === 0 ? "No campaigns yet" : "Click data will appear here"}
             />
             <MetricCard
               title="Ad Spend"
-              value="—"
-              icon={DollarSign}
-              subtitle="No data available"
+              value={formatINRCompact(0)}
+              icon={Currency}
+              subtitle={campaigns.length === 0 ? "No campaigns yet" : "Spend data will appear here"}
             />
             <MetricCard
               title="Avg ROI"
-              value="—"
+              value="0%"
               icon={TrendingUp}
-              subtitle="No data available"
+              subtitle={campaigns.length === 0 ? "No campaigns yet" : "ROI data will appear here"}
             />
           </div>
 

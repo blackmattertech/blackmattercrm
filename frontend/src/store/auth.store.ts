@@ -70,13 +70,25 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   login: async (email: string, password: string, rememberMe: boolean = false) => {
     set({ isLoading: true, error: null, rememberMe });
     try {
+      console.log('[Auth Store] Attempting login for:', email);
+      console.log('[Auth Store] Current window location:', typeof window !== 'undefined' ? window.location.href : 'N/A');
+      
       const response = await authApi.login(email, password);
+      
+      console.log('[Auth Store] Login response:', {
+        success: response.success,
+        hasToken: !!(response.token || response.data?.token),
+        hasUser: !!(response.user || response.data?.user),
+        error: response.error,
+        fullResponse: response,
+      });
       
       if (response.success) {
         const token = response.token || response.data?.token;
         const user = response.user || response.data?.user;
         
         if (token && user) {
+          console.log('[Auth Store] Login successful, setting token and user');
           // Store remember me preference
           if (typeof window !== 'undefined') {
             if (rememberMe) {
@@ -117,12 +129,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           return false;
         }
       } else {
-        const errorMsg = response.error || 'Invalid email or password';
+        console.error('[Auth Store] Login failed:', response.error);
+        const errorMsg = response.error || 'Invalid email or password. Please check your credentials and network connection.';
         set({ error: errorMsg, isLoading: false });
         return false;
       }
     } catch (error: any) {
-      const errorMsg = error?.response?.data?.error || error?.message || 'Network error';
+      console.error('[Auth Store] Login exception:', error);
+      const errorMsg = error?.response?.data?.error || error?.message || 'Network error. Please check:\n1. Backend server is running\n2. You are on the same network\n3. Firewall is not blocking connections';
       set({ error: errorMsg, isLoading: false });
       return false;
     }
@@ -213,18 +227,30 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
               isAuthenticated: true,
               isLoading: false,
             });
-            // Verify in background without blocking
+            // Verify in background without blocking - don't logout on errors
             authApi.getMe().then((response) => {
-              if (response.success && response.data) {
-                const updatedUser = response.data.user;
+              // Backend returns {success: true, user: {...}} directly, not nested in data
+              if (response.success && response.user) {
+                const updatedUser = response.user;
                 localStorage.setItem(STORAGE_KEYS.CACHED_USER, JSON.stringify(updatedUser));
                 localStorage.setItem(STORAGE_KEYS.CACHED_TIME, Date.now().toString());
                 const storage = getStorage(rememberMe);
                 storage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
                 set({ user: updatedUser });
+              } else if (response.status === 401) {
+                // Only logout on 401, not other errors
+                console.log('[Auth Store] Background checkAuth returned 401 - logging out');
+                get().logout();
               }
-            }).catch(() => {
-              // Ignore background errors, keep cached user
+              // For other errors, just ignore and keep cached user
+            }).catch((error: any) => {
+              // Only logout on 401 errors, ignore network errors
+              const is401 = error?.response?.status === 401 || error?.status === 401;
+              if (is401) {
+                console.log('[Auth Store] Background checkAuth got 401 error - logging out');
+                get().logout();
+              }
+              // Ignore other errors, keep cached user
             });
             return;
           } catch (e) {
@@ -237,8 +263,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ isLoading: true });
     try {
       const response = await authApi.getMe();
-      if (response.success && response.data) {
-        const user = response.data.user;
+      // Backend returns {success: true, user: {...}} directly, not nested in data
+      if (response.success && response.user) {
+        const user = response.user;
         const rememberMe = get().rememberMe;
         const storage = getStorage(rememberMe);
         
@@ -255,11 +282,42 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           isLoading: false,
         });
       } else {
-        // Token invalid, logout
-        get().logout();
+        // Only logout if we get a 401 (Unauthorized) - not for other errors
+        if (response.status === 401) {
+          console.log('[Auth Store] 401 Unauthorized in checkAuth - logging out');
+          get().logout();
+        } else {
+          // For other errors, keep using cached data if available
+          console.warn('[Auth Store] checkAuth failed but not 401, keeping cached data:', response);
+          const cachedUser = localStorage.getItem(STORAGE_KEYS.CACHED_USER);
+          if (cachedUser) {
+            try {
+              const user = JSON.parse(cachedUser);
+              set({
+                user,
+                isAuthenticated: true,
+                isLoading: false,
+              });
+              return;
+            } catch (e) {
+              // Invalid cache
+            }
+          }
+          set({ isLoading: false });
+        }
       }
-    } catch (error) {
-      // If we have cached user, use it even if API fails (offline support)
+    } catch (error: any) {
+      // Only logout on 401 errors, not network errors
+      const is401 = error?.response?.status === 401 || error?.status === 401;
+      
+      if (is401) {
+        console.log('[Auth Store] 401 error in checkAuth - logging out');
+        get().logout();
+        return;
+      }
+      
+      // For network errors, use cached data if available (offline support)
+      console.warn('[Auth Store] Network error in checkAuth, using cache if available:', error);
       if (typeof window !== 'undefined') {
         const cachedUser = localStorage.getItem(STORAGE_KEYS.CACHED_USER);
         if (cachedUser) {
@@ -276,7 +334,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           }
         }
       }
-      get().logout();
+      // If no cache and not 401, just stop loading (don't logout)
+      set({ isLoading: false });
     }
   },
 

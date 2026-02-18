@@ -89,6 +89,10 @@ export const authenticate = async (
 export const requireRole = (...allowedRoles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
+      logger.warn('requireRole: No user in request', {
+        path: req.path,
+        method: req.method,
+      });
       return res.status(401).json({ 
         error: 'Unauthorized', 
         message: 'Authentication required' 
@@ -96,12 +100,23 @@ export const requireRole = (...allowedRoles: string[]) => {
     }
 
     if (!allowedRoles.includes(req.user.role)) {
+      logger.warn('requireRole: Insufficient permissions', {
+        path: req.path,
+        method: req.method,
+        userRole: req.user.role,
+        requiredRoles: allowedRoles,
+      });
       return res.status(403).json({ 
         error: 'Forbidden', 
-        message: `Access denied. Required roles: ${allowedRoles.join(', ')}` 
+        message: `Access denied. Required roles: ${allowedRoles.join(', ')}. Your role: ${req.user.role}` 
       });
     }
 
+    logger.debug('requireRole: Access granted', {
+      path: req.path,
+      userRole: req.user.role,
+      requiredRoles: allowedRoles,
+    });
     next();
   };
 };

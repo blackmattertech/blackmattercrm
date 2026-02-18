@@ -31,18 +31,41 @@
   --secondary-foreground: #000000;
   --muted: #F5F5F5;
   --muted-foreground: #6B7280;
-  --accent: #C7F33C;
-  --accent-foreground: #000000;
+  --accent: var(--logo-primary);
+  --accent-foreground: #FFFFFF;
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
   --border: #E5E7EB;
   --input: transparent;
   --input-background: #F9FAFB;
-  --ring: #C7F33C;
+  --ring: var(--logo-primary);
   
-  /* Additional Design System Colors */
-  --lime-green: #C7F33C;
-  --pale-lime: #E1F2AE;
+  /* Logo Color System - Change this base color to match your logo */
+  /* Update --logo-base to your actual logo color, and all shades will be generated */
+  --logo-base: #0F766E; /* Base logo color - UPDATE THIS to match your logo */
+  
+  /* Generated Logo Color Shades (automatically derived from --logo-base) */
+  --logo-darkest: #064E3B;    /* 60% darker - for deepest accents */
+  --logo-darker: #0A6B5C;     /* 40% darker - for dark backgrounds */
+  --logo-dark: #0D9488;      /* 20% darker - for borders and emphasis */
+  --logo-primary: var(--logo-base); /* Base color */
+  --logo-light: #14B8A6;     /* 20% lighter - for hover states */
+  --logo-lighter: #5EEAD4;   /* 40% lighter - for light backgrounds */
+  --logo-lightest: #99F6E4;  /* 60% lighter - for very light backgrounds */
+  --logo-pale: #CCFBF1;      /* 85% lighter - for subtle backgrounds */
+  --logo-saturated: #0D9488;  /* More saturated version */
+  --logo-desaturated: #4A9B8E; /* Less saturated version */
+  
+  /* Heatmap Color Scale (from lightest to darkest) */
+  --heatmap-1: var(--logo-pale);      /* Lightest - lowest values */
+  --heatmap-2: var(--logo-lightest);  /* Light - low values */
+  --heatmap-3: var(--logo-lighter);   /* Medium-light - medium values */
+  --heatmap-4: var(--logo-light);     /* Medium - medium-high values */
+  --heatmap-5: var(--logo-primary);   /* Base - high values */
+  --heatmap-6: var(--logo-dark);      /* Dark - very high values */
+  --heatmap-7: var(--logo-darker);     /* Darker - highest values */
+  --heatmap-8: var(--logo-darkest);   /* Darkest - maximum values */
+  
   --ash-grey: #E8EEEA;
   --muted-green: #B1BBB0;
   --soft-white: #FAFAFA;
@@ -84,12 +107,14 @@
   --shadow-lg: 0 4px 16px 0 rgba(0, 0, 0, 0.08);
   --shadow-xl: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
   
-  /* Chart Colors */
-  --chart-1: #C7F33C;
-  --chart-2: #E1F2AE;
-  --chart-3: #B1BBB0;
-  --chart-4: #000000;
-  --chart-5: #6B7280;
+  /* Chart Colors - Using Logo Color Variations */
+  --chart-1: var(--logo-primary);     /* Primary chart color */
+  --chart-2: var(--logo-light);       /* Secondary chart color */
+  --chart-3: var(--logo-lighter);     /* Tertiary chart color */
+  --chart-4: var(--logo-dark);        /* Dark accent for charts */
+  --chart-5: var(--logo-darker);      /* Darker accent for charts */
+  --chart-6: #000000;                 /* Black for contrast */
+  --chart-7: #6B7280;                 /* Gray for neutral data */
 }
 
 .dark {
@@ -105,14 +130,14 @@
   --secondary-foreground: #FFFFFF;
   --muted: #1F1F1F;
   --muted-foreground: #9CA3AF;
-  --accent: #C7F33C;
-  --accent-foreground: #000000;
+  --accent: var(--logo-light);
+  --accent-foreground: #FFFFFF;
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
   --border: #2A2A2A;
   --input: transparent;
   --input-background: #1F1F1F;
-  --ring: #C7F33C;
+  --ring: var(--logo-light);
   
   /* Dark mode shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
@@ -120,11 +145,14 @@
   --shadow-lg: 0 4px 16px 0 rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
   
-  --chart-1: #C7F33C;
-  --chart-2: #A8D633;
-  --chart-3: #6B7280;
-  --chart-4: #FFFFFF;
-  --chart-5: #9CA3AF;
+  /* Chart Colors - Dark Mode - Using Logo Color Variations */
+  --chart-1: var(--logo-light);       /* Primary chart color (lighter for dark mode) */
+  --chart-2: var(--logo-primary);     /* Secondary chart color */
+  --chart-3: var(--logo-lighter);     /* Tertiary chart color */
+  --chart-4: var(--logo-dark);        /* Dark accent for charts */
+  --chart-5: var(--logo-darker);      /* Darker accent for charts */
+  --chart-6: #FFFFFF;                 /* White for contrast */
+  --chart-7: #9CA3AF;                 /* Gray for neutral data */
 }
 
 @theme inline {

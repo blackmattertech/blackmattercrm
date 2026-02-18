@@ -8,11 +8,32 @@
     background-color: #FAFAFA;
   }
   
-  .bg-lime-green {
-    background-color: #C7F33C;
-  }
+  /* Logo Color Utilities */
+  .bg-logo-primary { background-color: var(--logo-primary); }
+  .bg-logo-light { background-color: var(--logo-light); }
+  .bg-logo-lighter { background-color: var(--logo-lighter); }
+  .bg-logo-lightest { background-color: var(--logo-lightest); }
+  .bg-logo-pale { background-color: var(--logo-pale); }
+  .bg-logo-dark { background-color: var(--logo-dark); }
+  .bg-logo-darker { background-color: var(--logo-darker); }
+  .bg-logo-darkest { background-color: var(--logo-darkest); }
   
-  .text-lime-green {
-    color: #C7F33C;
-  }
+  .text-logo-primary { color: var(--logo-primary); }
+  .text-logo-light { color: var(--logo-light); }
+  .text-logo-lighter { color: var(--logo-lighter); }
+  .text-logo-lightest { color: var(--logo-lightest); }
+  .text-logo-pale { color: var(--logo-pale); }
+  .text-logo-dark { color: var(--logo-dark); }
+  .text-logo-darker { color: var(--logo-darker); }
+  .text-logo-darkest { color: var(--logo-darkest); }
+  
+  /* Heatmap Color Utilities */
+  .bg-heatmap-1 { background-color: var(--heatmap-1); }
+  .bg-heatmap-2 { background-color: var(--heatmap-2); }
+  .bg-heatmap-3 { background-color: var(--heatmap-3); }
+  .bg-heatmap-4 { background-color: var(--heatmap-4); }
+  .bg-heatmap-5 { background-color: var(--heatmap-5); }
+  .bg-heatmap-6 { background-color: var(--heatmap-6); }
+  .bg-heatmap-7 { background-color: var(--heatmap-7); }
+  .bg-heatmap-8 { background-color: var(--heatmap-8); }
 }

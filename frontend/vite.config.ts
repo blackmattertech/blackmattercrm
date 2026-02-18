@@ -19,4 +19,11 @@ export default defineConfig({
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
+
+  // Server configuration for network access
+  server: {
+    host: '0.0.0.0', // Listen on all network interfaces
+    port: 5173,
+    strictPort: false, // Try next available port if 5173 is taken
+  },
 })

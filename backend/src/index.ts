@@ -65,6 +65,13 @@ app.use(cors({
       return callback(null, true);
     }
     
+    // Allow local network IP addresses (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+    if (origin.match(/^http:\/\/192\.168\.\d+\.\d+:\d+$/) || 
+        origin.match(/^http:\/\/10\.\d+\.\d+\.\d+:\d+$/) ||
+        origin.match(/^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:\d+$/)) {
+      return callback(null, true);
+    }
+    
     // Allow configured APP_URL
     const allowedOrigins = [
       process.env.APP_URL,
@@ -76,10 +83,16 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      // In development, be more permissive
+      if (process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -93,11 +106,15 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Request logging middleware (only in development)
+// Request logging middleware (only in development) - BEFORE routes to catch all requests
 if (process.env.NODE_ENV === 'development') {
   app.use((req, res, next) => {
+    // Log all incoming requests including OPTIONS (CORS preflight)
     logger.info(`${req.method} ${req.path}`, {
-      body: req.method === 'POST' ? { ...req.body, password: req.body?.password ? '***' : undefined } : undefined,
+      origin: req.headers.origin,
+      'user-agent': req.headers['user-agent']?.substring(0, 50),
+      authorization: req.headers.authorization ? 'Bearer ***' : 'missing',
+      body: req.method === 'POST' || req.method === 'PUT' ? { ...req.body, password: req.body?.password ? '***' : undefined } : undefined,
     });
     next();
   });
@@ -118,9 +135,10 @@ app.use('/api/users', usersRoutes);
 app.use(errorHandler);
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`🌐 Access from other devices: http://192.168.1.39:${PORT}`);
 });
 
 // Graceful shutdown

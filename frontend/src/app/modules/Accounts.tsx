@@ -87,11 +87,21 @@ export function Accounts() {
     { account: "Professional Fees", drAmount: 8250, crAmount: 0, group: "Expenses" },
   ];
 
+  // Calculate totals from actual data
   const totalDr = trialBalanceData.reduce((sum, item) => sum + item.drAmount, 0);
   const totalCr = trialBalanceData.reduce((sum, item) => sum + item.crAmount, 0);
   const totalRevenue = incomeDetails.reduce((sum, item) => sum + item.amount, 0);
   const totalExpenses = expenseDetails.reduce((sum, item) => sum + item.amount, 0);
   const netIncome = totalRevenue - totalExpenses;
+
+  // Calculate stats for metric cards
+  const totalInvoices = invoices.length;
+  const paidInvoices = invoices.filter(inv => inv.status === 'paid').length;
+  const unpaidInvoices = invoices.filter(inv => inv.status === 'unpaid' || inv.status === 'overdue').length;
+  const totalInvoiceAmount = invoices.reduce((sum, inv) => sum + inv.amount, 0);
+  const paidAmount = invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + inv.amount, 0);
+  const unpaidAmount = invoices.filter(inv => inv.status === 'unpaid' || inv.status === 'overdue').reduce((sum, inv) => sum + inv.amount, 0);
+  const totalExpenseAmount = expenses.reduce((sum, exp) => sum + exp.amount, 0);
 
   // Empty arrays - will be populated from API when accounts endpoints are implemented
   const cashInflows: any[] = [];
@@ -1168,28 +1178,28 @@ export function Accounts() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
             <MetricCard
               title="Total Revenue"
-              value="—"
+              value={formatINRCompact(totalRevenue)}
               icon={DollarSign}
-              subtitle="No data available"
+              subtitle={totalRevenue === 0 ? "No revenue yet" : `${incomeDetails.length} income entries`}
               highlight={true}
             />
             <MetricCard
               title="Outstanding"
-              value="—"
+              value={formatINRCompact(unpaidAmount)}
               icon={FileText}
-              subtitle="No data available"
+              subtitle={unpaidInvoices === 0 ? "All invoices paid" : `${unpaidInvoices} unpaid invoices`}
             />
             <MetricCard
               title="Expenses"
-              value="—"
+              value={formatINRCompact(totalExpenseAmount)}
               icon={TrendingDown}
-              subtitle="No data available"
+              subtitle={totalExpenseAmount === 0 ? "No expenses yet" : `${expenses.length} expense entries`}
             />
             <MetricCard
               title="Net Profit"
-              value="—"
+              value={formatINRCompact(netIncome)}
               icon={TrendingUp}
-              subtitle="No data available"
+              subtitle={netIncome === 0 ? "No income data" : netIncome > 0 ? "Profit" : "Loss"}
             />
           </div>
 

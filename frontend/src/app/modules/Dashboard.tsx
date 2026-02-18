@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MetricCard } from "../components/MetricCard";
 import { ChartCard } from "../components/ChartCard";
 import { StatusBadge } from "../components/StatusBadge";
 import { Button } from "../components/ui/button";
 import {
-  DollarSign,
+  Currency,
   TrendingUp,
   Users,
   FileText,
@@ -18,27 +18,56 @@ import {
 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { formatINR, formatINRCompact, formatDate } from "../utils/formatters";
+import { crmApi } from "../../lib/api";
 
 export function Dashboard() {
   const [activityFilter, setActivityFilter] = useState<"all" | "sales" | "accounts" | "team">("all");
+  const [leads, setLeads] = useState<any[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(true);
 
-  // Chart data
-  const revenueData = [
-    { month: "Jan", revenue: 45000, expenses: 12000 },
-    { month: "Feb", revenue: 52000, expenses: 15000 },
-    { month: "Mar", revenue: 48000, expenses: 13000 },
-    { month: "Apr", revenue: 61000, expenses: 14000 },
-    { month: "May", revenue: 55000, expenses: 16000 },
-    { month: "Jun", revenue: 72000, expenses: 18000 },
-  ];
+  useEffect(() => {
+    loadLeads();
+  }, []);
 
+  const loadLeads = async () => {
+    setLeadsLoading(true);
+    try {
+      const response = await crmApi.getLeads();
+      if (response.success && response.data) {
+        const leadsArray = Array.isArray(response.data) ? response.data : [];
+        setLeads(leadsArray);
+      }
+    } catch (error) {
+      console.error('Failed to load leads:', error);
+    } finally {
+      setLeadsLoading(false);
+    }
+  };
+
+  // Calculate pipeline data from actual leads
   const pipelineData = [
-    { stage: "New", count: 12 },
-    { stage: "Contacted", count: 8 },
-    { stage: "Qualified", count: 15 },
-    { stage: "Proposal", count: 6 },
-    { stage: "Won", count: 4 },
+    { stage: "New", count: leads.filter(l => l.status === 'new').length },
+    { stage: "Contacted", count: leads.filter(l => l.status === 'contacted').length },
+    { stage: "Qualified", count: leads.filter(l => l.status === 'qualified').length },
+    { stage: "Proposal", count: leads.filter(l => l.status === 'proposal').length },
+    { stage: "Won", count: leads.filter(l => l.status === 'won').length },
   ];
+
+  // Calculate revenue data (placeholder - will be replaced with actual invoice data when available)
+  const revenueData = [
+    { month: "Jan", revenue: 0, expenses: 0 },
+    { month: "Feb", revenue: 0, expenses: 0 },
+    { month: "Mar", revenue: 0, expenses: 0 },
+    { month: "Apr", revenue: 0, expenses: 0 },
+    { month: "May", revenue: 0, expenses: 0 },
+    { month: "Jun", revenue: 0, expenses: 0 },
+  ];
+
+  // Calculate stats
+  const totalLeads = leads.length;
+  const activeLeads = leads.filter(l => l.status !== 'won' && l.status !== 'lost').length;
+  const pipelineValue = leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
+  const wonLeads = leads.filter(l => l.status === 'won').length;
 
   // Empty arrays - will be populated from API when backend endpoints are implemented
   const activities: any[] = [];
@@ -75,29 +104,29 @@ export function Dashboard() {
           {/* Metrics Grid - 2 columns on mobile, 4 on desktop */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
             <MetricCard
-              title="Today Revenue"
-              value="—"
-              icon={DollarSign}
-              subtitle="No data available"
+              title="Pipeline Value"
+              value={formatINRCompact(pipelineValue)}
+              icon={Currency}
+              subtitle={totalLeads === 0 ? "No leads yet" : `${totalLeads} leads in pipeline`}
               highlight={true}
             />
             <MetricCard
-              title="Weekly Sales"
-              value="—"
-              icon={Activity}
-              subtitle="No data available"
-            />
-            <MetricCard
-              title="Monthly Target"
-              value="—"
-              icon={Target}
-              subtitle="No data available"
-            />
-            <MetricCard
               title="Active Leads"
-              value="—"
+              value={activeLeads.toString()}
+              icon={Activity}
+              subtitle={activeLeads === 0 ? "No active leads" : `${wonLeads} won, ${totalLeads - activeLeads - wonLeads} lost`}
+            />
+            <MetricCard
+              title="Total Leads"
+              value={totalLeads.toString()}
+              icon={Target}
+              subtitle={totalLeads === 0 ? "No leads yet" : `${leads.filter(l => l.status === 'new').length} new`}
+            />
+            <MetricCard
+              title="Won Deals"
+              value={wonLeads.toString()}
               icon={Users}
-              subtitle="No data available"
+              subtitle={wonLeads === 0 ? "No won deals" : formatINRCompact(leads.filter(l => l.status === 'won').reduce((sum, l) => sum + (l.value || 0), 0))}
             />
           </div>
 
@@ -173,17 +202,22 @@ export function Dashboard() {
                     <div className="flex-1 grid grid-cols-7 gap-1.5">
                       {Array.from({ length: 7 }, (_, i) => {
                         const intensity = Math.random();
+                        // Use logo color variations for heatmap
+                        let color = 'var(--muted)';
+                        if (intensity > 0.85) color = 'var(--heatmap-8)'; // Darkest
+                        else if (intensity > 0.75) color = 'var(--heatmap-7)'; // Darker
+                        else if (intensity > 0.65) color = 'var(--heatmap-6)'; // Dark
+                        else if (intensity > 0.55) color = 'var(--heatmap-5)'; // Base
+                        else if (intensity > 0.45) color = 'var(--heatmap-4)'; // Light
+                        else if (intensity > 0.35) color = 'var(--heatmap-3)'; // Lighter
+                        else if (intensity > 0.25) color = 'var(--heatmap-2)'; // Lightest
+                        else if (intensity > 0.1) color = 'var(--heatmap-1)'; // Pale
+                        
                         return (
                           <div
                             key={i}
                             className="aspect-square rounded-md transition-all hover:scale-110"
-                            style={{
-                              backgroundColor: intensity > 0.7 
-                                ? 'var(--accent)' 
-                                : intensity > 0.4 
-                                  ? 'var(--pale-lime)' 
-                                  : 'var(--muted)'
-                            }}
+                            style={{ backgroundColor: color }}
                           />
                         );
                       })}
