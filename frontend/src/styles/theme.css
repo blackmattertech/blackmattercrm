@@ -1,0 +1,253 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Typography Scale */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-size: 16px;
+  --text-heading: 34px;
+  --text-title: 28px;
+  --text-subheading: 24px;
+  --text-body: 16px;
+  --text-sm: 14px;
+  --text-xs: 12px;
+  
+  /* Font Weights */
+  --font-light: 300;
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  
+  /* Colors - Light Mode */
+  --background: #FFFFFF;
+  --foreground: #000000;
+  --card: #FFFFFF;
+  --card-foreground: #000000;
+  --popover: #FFFFFF;
+  --popover-foreground: #000000;
+  --primary: #000000;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E8EEEA;
+  --secondary-foreground: #000000;
+  --muted: #F5F5F5;
+  --muted-foreground: #6B7280;
+  --accent: var(--logo-primary);
+  --accent-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: #E5E7EB;
+  --input: transparent;
+  --input-background: #F9FAFB;
+  --ring: var(--logo-primary);
+  
+  /* Logo Color System - Change this base color to match your logo */
+  /* Update --logo-base to your actual logo color, and all shades will be generated */
+  --logo-base: #0F766E; /* Base logo color - UPDATE THIS to match your logo */
+  
+  /* Generated Logo Color Shades (automatically derived from --logo-base) */
+  --logo-darkest: #064E3B;    /* 60% darker - for deepest accents */
+  --logo-darker: #0A6B5C;     /* 40% darker - for dark backgrounds */
+  --logo-dark: #0D9488;      /* 20% darker - for borders and emphasis */
+  --logo-primary: var(--logo-base); /* Base color */
+  --logo-light: #14B8A6;     /* 20% lighter - for hover states */
+  --logo-lighter: #5EEAD4;   /* 40% lighter - for light backgrounds */
+  --logo-lightest: #99F6E4;  /* 60% lighter - for very light backgrounds */
+  --logo-pale: #CCFBF1;      /* 85% lighter - for subtle backgrounds */
+  --logo-saturated: #0D9488;  /* More saturated version */
+  --logo-desaturated: #4A9B8E; /* Less saturated version */
+  
+  /* Heatmap Color Scale (from lightest to darkest) */
+  --heatmap-1: var(--logo-pale);      /* Lightest - lowest values */
+  --heatmap-2: var(--logo-lightest);  /* Light - low values */
+  --heatmap-3: var(--logo-lighter);   /* Medium-light - medium values */
+  --heatmap-4: var(--logo-light);     /* Medium - medium-high values */
+  --heatmap-5: var(--logo-primary);   /* Base - high values */
+  --heatmap-6: var(--logo-dark);      /* Dark - very high values */
+  --heatmap-7: var(--logo-darker);     /* Darker - highest values */
+  --heatmap-8: var(--logo-darkest);   /* Darkest - maximum values */
+  
+  --ash-grey: #E8EEEA;
+  --muted-green: #B1BBB0;
+  --soft-white: #FAFAFA;
+  --bg-page: #F5F5F5;
+  
+  /* Status Colors */
+  --success: #10B981;
+  --success-foreground: #FFFFFF;
+  --warning: #F59E0B;
+  --warning-foreground: #FFFFFF;
+  --info: #3B82F6;
+  --info-foreground: #FFFFFF;
+  
+  --status-active: #10B981;
+  --status-pending: #F59E0B;
+  --status-inactive: #9CA3AF;
+  --status-overdue: #EF4444;
+  --status-draft: #8B5CF6;
+  
+  /* Spacing Scale */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  
+  /* Border Radius */
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  
+  /* Shadow System */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px 0 rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 16px 0 rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  
+  /* Chart Colors - Using Logo Color Variations */
+  --chart-1: var(--logo-primary);     /* Primary chart color */
+  --chart-2: var(--logo-light);       /* Secondary chart color */
+  --chart-3: var(--logo-lighter);     /* Tertiary chart color */
+  --chart-4: var(--logo-dark);        /* Dark accent for charts */
+  --chart-5: var(--logo-darker);      /* Darker accent for charts */
+  --chart-6: #000000;                 /* Black for contrast */
+  --chart-7: #6B7280;                 /* Gray for neutral data */
+}
+
+.dark {
+  --background: #0A0A0A;
+  --foreground: #FFFFFF;
+  --card: #141414;
+  --card-foreground: #FFFFFF;
+  --popover: #141414;
+  --popover-foreground: #FFFFFF;
+  --primary: #FFFFFF;
+  --primary-foreground: #000000;
+  --secondary: #1F1F1F;
+  --secondary-foreground: #FFFFFF;
+  --muted: #1F1F1F;
+  --muted-foreground: #9CA3AF;
+  --accent: var(--logo-light);
+  --accent-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: #2A2A2A;
+  --input: transparent;
+  --input-background: #1F1F1F;
+  --ring: var(--logo-light);
+  
+  /* Dark mode shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px 0 rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 16px 0 rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+  
+  /* Chart Colors - Dark Mode - Using Logo Color Variations */
+  --chart-1: var(--logo-light);       /* Primary chart color (lighter for dark mode) */
+  --chart-2: var(--logo-primary);     /* Secondary chart color */
+  --chart-3: var(--logo-lighter);     /* Tertiary chart color */
+  --chart-4: var(--logo-dark);        /* Dark accent for charts */
+  --chart-5: var(--logo-darker);      /* Darker accent for charts */
+  --chart-6: #FFFFFF;                 /* White for contrast */
+  --chart-7: #9CA3AF;                 /* Gray for neutral data */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-family);
+  }
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-heading);
+    font-weight: var(--font-medium);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    font-size: var(--text-title);
+    font-weight: var(--font-medium);
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  h3 {
+    font-size: var(--text-subheading);
+    font-weight: var(--font-medium);
+    line-height: 1.4;
+  }
+
+  h4 {
+    font-size: var(--text-body);
+    font-weight: var(--font-medium);
+    line-height: 1.5;
+  }
+
+  p {
+    font-size: var(--text-body);
+    font-weight: var(--font-regular);
+    line-height: 1.6;
+  }
+
+  label {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-body);
+    font-weight: var(--font-regular);
+    line-height: 1.5;
+  }
+}

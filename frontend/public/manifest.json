@@ -1,0 +1,27 @@
+{
+  "name": "BlackMatter ERP",
+  "short_name": "BM ERP",
+  "description": "Comprehensive ERP ecosystem for business operations",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#C7F33C",
+  "orientation": "portrait-primary",
+  "icons": [],
+  "categories": ["business", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View dashboard",
+      "url": "/?section=dashboard"
+    },
+    {
+      "name": "CRM",
+      "short_name": "CRM",
+      "description": "Manage leads",
+      "url": "/?section=crm"
+    }
+  ]
+}
