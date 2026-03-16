@@ -1,0 +1,3 @@
+# Centralized env (contains secrets – use .env.example as template)
+.env
+.env.local
