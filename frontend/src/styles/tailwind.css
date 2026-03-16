@@ -27,6 +27,9 @@
   .text-logo-darker { color: var(--logo-darker); }
   .text-logo-darkest { color: var(--logo-darkest); }
   
+  .border-logo-light { border-color: var(--logo-light); }
+  .border-logo-primary { border-color: var(--logo-primary); }
+  
   /* Heatmap Color Utilities */
   .bg-heatmap-1 { background-color: var(--heatmap-1); }
   .bg-heatmap-2 { background-color: var(--heatmap-2); }

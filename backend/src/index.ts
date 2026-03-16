@@ -33,24 +33,42 @@ export const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Initialize Redis client
-export const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD || undefined,
-  retryStrategy: (times) => {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
-  },
-});
+// Optional Redis: only connect when REDIS_ENABLED=true (e.g. in production).
+// Without Redis, cache is skipped and the app still works.
+const redisEnabled = process.env.REDIS_ENABLED === 'true';
 
-redis.on('connect', () => {
-  logger.info('Redis connected successfully');
-});
+const noOpCache = {
+  get: async (_key: string): Promise<null> => null,
+  setex: async (_key: string, _ttl: number, _value: string): Promise<void> => {},
+  del: async (..._keys: string[]): Promise<void> => {},
+  quit: async (): Promise<void> => {},
+  get status() { return 'disabled' as const; },
+};
 
-redis.on('error', (err) => {
-  logger.error('Redis connection error:', err);
-});
+function createRedisClient(): typeof noOpCache | Redis {
+  if (!redisEnabled) {
+    logger.info('Redis disabled (set REDIS_ENABLED=true to enable caching)');
+    return noOpCache;
+  }
+  const client = new Redis({
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    password: process.env.REDIS_PASSWORD || undefined,
+    retryStrategy: (times) => {
+      const delay = Math.min(times * 50, 2000);
+      return delay;
+    },
+  });
+  client.on('connect', () => {
+    logger.info('Redis connected successfully');
+  });
+  client.on('error', (err) => {
+    logger.error('Redis connection error:', err);
+  });
+  return client;
+}
+
+export const redis = createRedisClient();
 
 // Middleware
 app.use(compression()); // Compress responses for faster transfer
@@ -102,7 +120,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    redis: redis.status === 'ready' ? 'connected' : 'disconnected'
+    redis: redis.status === 'ready' ? 'connected' : redis.status === 'disabled' ? 'disabled' : 'disconnected'
   });
 });
 
