@@ -38,7 +38,7 @@ interface ReportDetail {
 
 export function Accounts() {
   const [selectedTab, setSelectedTab] = useState("invoices");
-  const [currentView, setCurrentView] = useState<"main" | "income" | "cashflow" | "trial" | "capital" | "new-invoice" | "new-receipt" | "new-payment">("main");
+  const [currentView, setCurrentView] = useState<"main" | "income" | "cashflow" | "trial" | "capital" | "new-invoice" | "new-receipt" | "new-payment" | "new-expense">("main");
   const [selectedDirector, setSelectedDirector] = useState<string | null>(null);
   const [directors, setDirectors] = useState<any[]>([]);
   const [directorsLoading, setDirectorsLoading] = useState(false);
@@ -1161,16 +1161,99 @@ export function Accounts() {
     );
   }
 
+  // New Expense Form View
+  if (currentView === "new-expense") {
+    return (
+      <div className="min-h-screen bg-soft-white dark:bg-background">
+        <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 border-b bg-background">
+          <div className="w-full">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="icon" onClick={() => setCurrentView("main")} className="rounded-xl">
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-medium">Add Expense</h1>
+                  <p className="text-sm text-muted-foreground">Log a new expense</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setCurrentView("main")} className="rounded-xl">Cancel</Button>
+                <Button className="rounded-xl">Save Expense</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          <div className="w-full max-w-4xl mx-auto">
+            <form className="space-y-6">
+              <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
+                <h3 className="font-medium text-lg pb-3 border-b">Expense Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Category *</label>
+                    <select className="w-full px-4 py-2 rounded-xl border border-border bg-background">
+                      <option value="">Select Category</option>
+                      <option value="salary">Salary & Wages</option>
+                      <option value="rent">Rent</option>
+                      <option value="utilities">Utilities</option>
+                      <option value="software">Software & Subscriptions</option>
+                      <option value="marketing">Marketing</option>
+                      <option value="office">Office Expenses</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Vendor *</label>
+                    <input type="text" placeholder="Vendor or payee name" className="w-full px-4 py-2 rounded-xl border border-border bg-background" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Amount (₹) *</label>
+                    <input type="number" placeholder="0" className="w-full px-4 py-2 rounded-xl border border-border bg-background" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Date *</label>
+                    <input type="date" className="w-full px-4 py-2 rounded-xl border border-border bg-background" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Description</label>
+                    <textarea rows={3} placeholder="What is this expense for?" className="w-full px-4 py-2 rounded-xl border border-border bg-background"></textarea>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Status *</label>
+                    <select className="w-full px-4 py-2 rounded-xl border border-border bg-background">
+                      <option value="paid">Paid</option>
+                      <option value="pending">Pending</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end pt-4">
+                <Button type="button" variant="outline" onClick={() => setCurrentView("main")} className="rounded-xl">
+                  Cancel
+                </Button>
+                <Button type="submit" className="rounded-xl">
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Save Expense
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Main View
   return (
     <div className="min-h-screen bg-soft-white dark:bg-background">
       <PageHeader
         title="Accounts"
         description="Financial management and tracking"
-        action={{
-          label: "New Invoice",
-          onClick: () => setCurrentView("new-invoice")
-        }}
       />
 
       <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
@@ -1205,14 +1288,21 @@ export function Accounts() {
 
           <Tabs value={selectedTab} onValueChange={setSelectedTab}>
             <TabsList className="rounded-xl">
-              <TabsTrigger value="invoices" className="rounded-lg">Invoices</TabsTrigger>
-              <TabsTrigger value="receipts" className="rounded-lg">Receipts</TabsTrigger>
-              <TabsTrigger value="payments" className="rounded-lg">Payments</TabsTrigger>
-              <TabsTrigger value="expenses" className="rounded-lg">Expenses</TabsTrigger>
-              <TabsTrigger value="reports" className="rounded-lg">Reports</TabsTrigger>
+              <TabsTrigger value="invoices" className="rounded-lg data-[state=active]:!bg-logo-primary data-[state=active]:!text-white data-[state=active]:border-transparent">Invoices</TabsTrigger>
+              <TabsTrigger value="receipts" className="rounded-lg data-[state=active]:!bg-logo-primary data-[state=active]:!text-white data-[state=active]:border-transparent">Receipts</TabsTrigger>
+              <TabsTrigger value="payments" className="rounded-lg data-[state=active]:!bg-logo-primary data-[state=active]:!text-white data-[state=active]:border-transparent">Payments</TabsTrigger>
+              <TabsTrigger value="expenses" className="rounded-lg data-[state=active]:!bg-logo-primary data-[state=active]:!text-white data-[state=active]:border-transparent">Expenses</TabsTrigger>
+              <TabsTrigger value="reports" className="rounded-lg data-[state=active]:!bg-logo-primary data-[state=active]:!text-white data-[state=active]:border-transparent">Reports</TabsTrigger>
             </TabsList>
 
             <TabsContent value="invoices" className="mt-6">
+              <div className="flex justify-between items-center mb-4">
+                <p className="text-sm text-muted-foreground">Create and manage invoices</p>
+                <Button onClick={() => setCurrentView("new-invoice")} className="rounded-xl">
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Invoice
+                </Button>
+              </div>
               <div className="bg-card border border-border rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -1408,6 +1498,13 @@ export function Accounts() {
             </TabsContent>
 
             <TabsContent value="expenses" className="mt-6">
+              <div className="flex justify-between items-center mb-4">
+                <p className="text-sm text-muted-foreground">Track and add expenses</p>
+                <Button onClick={() => setCurrentView("new-expense")} className="rounded-xl">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Expense
+                </Button>
+              </div>
               <div className="bg-card border border-border rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
