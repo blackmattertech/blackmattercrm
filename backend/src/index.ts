@@ -2,9 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import Redis from 'ioredis';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Import routes
 import authRoutes from './routes/auth.routes.js';
@@ -21,8 +25,9 @@ import usersRoutes from './routes/users.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { logger } from './utils/logger.js';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from repo root (centralized .env)
+const rootEnv = path.resolve(__dirname, '..', '..', '.env');
+dotenv.config({ path: rootEnv });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
