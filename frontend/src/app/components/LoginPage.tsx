@@ -122,7 +122,7 @@ export function LoginPage() {
                   </p>
                 ) : typeof window !== 'undefined' && !/^localhost|^127\.0\.0\.1|^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(window.location.hostname) ? (
                   <p className="text-xs mt-2">
-                    This is the live site. Deploy the backend (e.g. Render, Railway), then in Netlify set <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">VITE_API_URL</code> to your backend URL (e.g. <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">https://your-api.onrender.com/api</code>) and redeploy.
+                    API runs on this same site (Netlify Function). Remove <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">VITE_API_URL</code> from Netlify env if set. In Netlify set <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">SUPABASE_URL</code>, <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code>, <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">SUPABASE_ANON_KEY</code>, <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">APP_URL</code>, <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">JWT_SECRET</code>, then redeploy. Check Netlify → Functions for errors.
                   </p>
                 ) : (
                   <p className="text-xs mt-2">

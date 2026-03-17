@@ -1,49 +1,35 @@
 // Dynamically determine API URL based on current hostname
 // This allows the app to work on both localhost and network IP addresses
 const getApiUrl = (): string => {
-  // Use environment variable if set (highest priority)
+  if (typeof window === 'undefined') return 'http://localhost:3001/api';
+
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  const port = window.location.port ? ':' + window.location.port : '';
+  const isProduction = !/^localhost|^127\.0\.0\.1|^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname);
+
+  // Production (e.g. Netlify): always use same-origin /api — API runs as Netlify Function on same deploy
+  if (isProduction) {
+    const apiUrl = `${protocol}//${hostname}${port}/api`;
+    console.log('[API] Using same-origin API URL:', apiUrl);
+    return apiUrl;
+  }
+
+  // VITE_API_URL only used for local/dev (e.g. override backend port)
   const envUrl = (import.meta as any).env?.VITE_API_URL;
-  if (envUrl) {
-    console.log('[API] VITE_API_URL found in environment:', envUrl);
-    
-    // Extract IP from env URL to check if it matches current hostname
-    try {
-      const envUrlObj = new URL(envUrl);
-      const envHostname = envUrlObj.hostname;
-      const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      
-      // If env URL points to different IP than current hostname, warn but use it
-      if (envHostname !== currentHostname && envHostname !== 'localhost' && currentHostname !== 'localhost') {
-        console.warn('[API] VITE_API_URL points to different IP:', envHostname, 'but frontend is on:', currentHostname);
-        console.warn('[API] If connection fails, backend might be on:', currentHostname);
-      }
-    } catch (e) {
-      // Invalid URL, continue with env URL as-is
-    }
-    
+  if (envUrl && (hostname === 'localhost' || hostname === '127.0.0.1')) {
+    console.log('[API] VITE_API_URL from env:', envUrl);
     return envUrl;
   }
+
+  // Localhost: use localhost:3001 (standalone backend)
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    const apiUrl = `${protocol}//localhost:3001/api`;
+    console.log('[API] Using localhost API URL:', apiUrl);
+    return apiUrl;
+  }
   
-  // If running in browser, use current hostname
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    
-    // For localhost, use localhost:3001 (standalone backend)
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      const apiUrl = `${protocol}//localhost:3001/api`;
-      console.log('[API] Using localhost API URL:', apiUrl);
-      return apiUrl;
-    }
-    
-    // For production (e.g. Netlify): API is same origin at /api (Netlify Function)
-    if (!/^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)) {
-      const apiUrl = `${protocol}//${hostname}${window.location.port ? ':' + window.location.port : ''}/api`;
-      console.log('[API] Using same-origin API URL:', apiUrl);
-      return apiUrl;
-    }
-    
-    // For network IPs, try to detect the backend IP
+  // Private IP (e.g. 192.168.x.x): try to detect the backend IP
     // Check if there's a configured backend IP in localStorage first
     let backendHostname = hostname;
     const configuredBackendIP = localStorage.getItem('backend_ip');
@@ -90,11 +76,7 @@ const getApiUrl = (): string => {
       console.log('[API] To configure backend IP, run: localStorage.setItem("backend_ip", "192.168.1.38")');
     }
     
-    return apiUrl;
-  }
-  
-  // Fallback to localhost for SSR
-  return 'http://localhost:3001/api';
+  return apiUrl;
 };
 
 const API_URL = getApiUrl();
