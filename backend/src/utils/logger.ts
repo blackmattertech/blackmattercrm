@@ -19,20 +19,24 @@ const consoleFormat = winston.format.combine(
   })
 );
 
+// Netlify/serverless has read-only fs — skip file transports to avoid ENOENT on mkdir 'logs'
 const isServerless = !!process.env.NETLIFY;
 
 const transports: winston.transport[] = [];
-// File transports only when we have a writable filesystem (not on Netlify/serverless)
+
 if (!isServerless) {
-  transports.push(
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' })
-  );
+  try {
+    transports.push(
+      new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+      new winston.transports.File({ filename: 'logs/combined.log' })
+    );
+  } catch {
+    // ignore (e.g. read-only fs)
+  }
 }
-// Console: always in dev; in production add only when serverless (Netlify has no file fs)
-if (process.env.NODE_ENV !== 'production' || isServerless) {
-  transports.push(new winston.transports.Console({ format: consoleFormat }));
-}
+
+// Ensure we always have at least console (required on Netlify; fine elsewhere)
+transports.push(new winston.transports.Console({ format: consoleFormat }));
 
 export const logger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',

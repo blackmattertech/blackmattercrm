@@ -4,6 +4,9 @@
  */
 const serverless = require('serverless-http');
 
+// So backend (and its logger) skip file transports and use read-only-fs-safe behavior
+process.env.NETLIFY = 'true';
+
 let appPromise;
 
 async function getApp() {
