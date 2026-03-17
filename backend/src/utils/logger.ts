@@ -19,18 +19,24 @@ const consoleFormat = winston.format.combine(
   })
 );
 
+const isServerless = !!process.env.NETLIFY;
+
+const transports: winston.transport[] = [];
+// File transports only when we have a writable filesystem (not on Netlify/serverless)
+if (!isServerless) {
+  transports.push(
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'logs/combined.log' })
+  );
+}
+// Console: always in dev; in production add only when serverless (Netlify has no file fs)
+if (process.env.NODE_ENV !== 'production' || isServerless) {
+  transports.push(new winston.transports.Console({ format: consoleFormat }));
+}
+
 export const logger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   format: logFormat,
   defaultMeta: { service: 'blackmatter-erp' },
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-  ],
+  transports,
 });
-
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: consoleFormat,
-  }));
-}
