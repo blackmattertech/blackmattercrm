@@ -116,12 +116,19 @@ export function LoginPage() {
               <div className="flex-1">
                 <p className="font-medium mb-1">Connection issue</p>
                 <p className="text-xs">{connectionStatus.message}</p>
-                <p className="text-xs mt-2">
-                  On this machine: run <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">npm run dev</code> from the project root, or <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">cd backend && npm run dev</code>.
-                </p>
-                <p className="text-xs mt-1">
-                  Backend on another IP: <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded text-xs">localStorage.setItem(&apos;backend_ip&apos;, &apos;192.168.1.39&apos;)</code> then refresh.
-                </p>
+                {typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? (
+                  <p className="text-xs mt-2">
+                    From project root run <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">npm run dev</code> (starts backend + frontend), then open this page again.
+                  </p>
+                ) : typeof window !== 'undefined' && !/^localhost|^127\.0\.0\.1|^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(window.location.hostname) ? (
+                  <p className="text-xs mt-2">
+                    This is the live site. Deploy the backend (e.g. Render, Railway), then in Netlify set <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">VITE_API_URL</code> to your backend URL (e.g. <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">https://your-api.onrender.com/api</code>) and redeploy.
+                  </p>
+                ) : (
+                  <p className="text-xs mt-2">
+                    Backend on another IP: <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded text-xs">localStorage.setItem(&apos;backend_ip&apos;, &apos;192.168.1.39&apos;)</code> then refresh.
+                  </p>
+                )}
                 <Button type="button" variant="outline" size="sm" className="mt-2" onClick={testConnection} disabled={connectionStatus.testing}>
                   {connectionStatus.testing ? 'Testing…' : 'Retry connection'}
                 </Button>
