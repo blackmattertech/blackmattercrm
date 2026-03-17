@@ -43,7 +43,7 @@ router.get('/directors', authenticate, async (req, res) => {
     // TODO: In future, fetch from journal_entries or director_capital_transactions table
     const directorsWithCapital = (directors || []).map((director) => ({
       id: director.id,
-      name: director.full_name || director.email.split('@')[0],
+      name: director.full_name ?? director.email?.split('@')[0] ?? 'Unknown',
       email: director.email,
       phone: director.phone,
       role: director.role,

@@ -8,6 +8,7 @@ import { DollarSign, FileText, TrendingUp, TrendingDown, Download, Eye, Send, Ar
 import { formatINR, formatINRCompact, formatDate } from "../utils/formatters";
 import { accountsApi } from "../../lib/api";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Invoice {
   id: string;
@@ -59,8 +60,12 @@ export function Accounts() {
       const response = await accountsApi.getDirectors();
       if (response.success && response.data) {
         setDirectors(response.data);
+      } else {
+        toast.error(response.error ?? 'Failed to load directors');
       }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to load directors';
+      toast.error(msg);
       console.error('Failed to load directors:', error);
     } finally {
       setDirectorsLoading(false);

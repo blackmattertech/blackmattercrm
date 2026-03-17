@@ -19,11 +19,14 @@ import {
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { formatINR, formatINRCompact, formatDate } from "../utils/formatters";
 import { crmApi } from "../../lib/api";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 export function Dashboard() {
   const [activityFilter, setActivityFilter] = useState<"all" | "sales" | "accounts" | "team">("all");
   const [leads, setLeads] = useState<any[]>([]);
   const [leadsLoading, setLeadsLoading] = useState(true);
+  const [leadsError, setLeadsError] = useState<string | null>(null);
 
   useEffect(() => {
     loadLeads();
@@ -31,13 +34,20 @@ export function Dashboard() {
 
   const loadLeads = async () => {
     setLeadsLoading(true);
+    setLeadsError(null);
     try {
       const response = await crmApi.getLeads();
       if (response.success && response.data) {
         const leadsArray = Array.isArray(response.data) ? response.data : [];
         setLeads(leadsArray);
+      } else {
+        setLeadsError(response.error ?? 'Failed to load leads');
+        toast.error(response.error ?? 'Failed to load leads');
       }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to load leads';
+      setLeadsError(msg);
+      toast.error(msg);
       console.error('Failed to load leads:', error);
     } finally {
       setLeadsLoading(false);
@@ -74,8 +84,27 @@ export function Dashboard() {
   const projects: any[] = [];
   const upcomingTasks: any[] = [];
 
+  if (leadsLoading) {
+    return (
+      <div className="min-h-screen bg-soft-white dark:bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-soft-white dark:bg-background">
+      {leadsError && (
+        <div className="px-4 sm:px-6 lg:px-8 pt-4">
+          <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-sm text-destructive flex items-center justify-between">
+            <span>{leadsError}</span>
+            <Button variant="ghost" size="sm" onClick={loadLeads}>Retry</Button>
+          </div>
+        </div>
+      )}
       {/* Page Header */}
       <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 border-b bg-background">
         <div className="w-full">

@@ -75,15 +75,15 @@ export function Marketing() {
                   ) : (
                     campaigns.map((campaign) => (
                       <tr key={campaign.id} className="border-b hover:bg-muted/50 transition-colors">
-                        <td className="p-4 font-medium text-sm">{campaign.name}</td>
-                        <td className="p-4 text-sm">{campaign.platform}</td>
-                        <td className="p-4 text-sm">{campaign.impressions.toLocaleString()}</td>
-                        <td className="p-4 text-sm">{campaign.clicks.toLocaleString()}</td>
-                        <td className="p-4 text-sm">{formatINR(campaign.spent)}</td>
-                        <td className="p-4 text-sm font-medium text-emerald-600">{campaign.roi}x</td>
+                        <td className="p-4 font-medium text-sm">{campaign.name ?? ''}</td>
+                        <td className="p-4 text-sm">{campaign.platform ?? ''}</td>
+                        <td className="p-4 text-sm">{(campaign.impressions ?? 0).toLocaleString()}</td>
+                        <td className="p-4 text-sm">{(campaign.clicks ?? 0).toLocaleString()}</td>
+                        <td className="p-4 text-sm">{formatINR(campaign.spent ?? 0)}</td>
+                        <td className="p-4 text-sm font-medium text-emerald-600">{campaign.roi ?? 0}x</td>
                         <td className="p-4">
                           <span className={`text-xs px-2 py-1 rounded-full ${
-                            campaign.status === "active" 
+                            (campaign.status ?? "") === "active" 
                               ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" 
                               : "bg-muted text-muted-foreground"
                           }`}>

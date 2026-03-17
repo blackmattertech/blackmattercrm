@@ -2153,11 +2153,11 @@ export function CRM() {
               {/* Lead Info */}
               <div className="flex items-start gap-4 pb-6 border-b">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-foreground to-foreground/80 flex items-center justify-center text-background text-xl font-medium">
-                  {selectedLead.name.split(' ').map(n => n[0]).join('')}
+                  {(selectedLead?.name ?? 'Unknown').split(' ').map(n => n[0]).join('')}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold">{selectedLead.name}</h3>
-                  <p className="text-muted-foreground">{selectedLead.company}</p>
+                  <h3 className="text-xl font-semibold">{selectedLead?.name ?? 'Unknown'}</h3>
+                  <p className="text-muted-foreground">{selectedLead?.company ?? ''}</p>
                   <div className="flex gap-2 mt-2 items-center">
                     <Select 
                       value={selectedLead.status} 

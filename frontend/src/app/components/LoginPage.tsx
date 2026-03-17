@@ -22,24 +22,23 @@ export function LoginPage() {
 
   const { login, signup, isLoading, error } = useAuthStore();
 
+  const testConnection = async () => {
+    setConnectionStatus({ testing: true, success: null, message: 'Testing connection...' });
+    const result = await testApiConnection();
+    setConnectionStatus({
+      testing: false,
+      success: result.success,
+      message: result.message,
+    });
+    if (!result.success) {
+      console.error('[Login] Backend connection test failed:', result);
+    } else {
+      console.log('[Login] Backend connection test passed:', result);
+    }
+  };
+
   // Test backend connection on mount
   useEffect(() => {
-    const testConnection = async () => {
-      setConnectionStatus({ testing: true, success: null, message: 'Testing connection...' });
-      const result = await testApiConnection();
-      setConnectionStatus({
-        testing: false,
-        success: result.success,
-        message: result.message,
-      });
-      
-      if (!result.success) {
-        console.error('[Login] Backend connection test failed:', result);
-      } else {
-        console.log('[Login] Backend connection test passed:', result);
-      }
-    };
-    
     testConnection();
   }, []);
 
@@ -115,17 +114,17 @@ export function LoginPage() {
             <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <p className="font-medium mb-1">Connection Issue</p>
+                <p className="font-medium mb-1">Connection issue</p>
                 <p className="text-xs">{connectionStatus.message}</p>
-                <p className="text-xs mt-2">Make sure backend is running: <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">npm run dev</code></p>
-                <p className="text-xs mt-1">
-                  If backend is on different IP, configure it: <br/>
-                  <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded text-xs">
-                    localStorage.setItem('backend_ip', '192.168.1.39')
-                  </code>
-                  <br/>
-                  <span className="text-xs text-muted-foreground">Then refresh the page</span>
+                <p className="text-xs mt-2">
+                  On this machine: run <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">npm run dev</code> from the project root, or <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">cd backend && npm run dev</code>.
                 </p>
+                <p className="text-xs mt-1">
+                  Backend on another IP: <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded text-xs">localStorage.setItem(&apos;backend_ip&apos;, &apos;192.168.1.39&apos;)</code> then refresh.
+                </p>
+                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={testConnection} disabled={connectionStatus.testing}>
+                  {connectionStatus.testing ? 'Testing…' : 'Retry connection'}
+                </Button>
               </div>
             </div>
           ) : connectionStatus.success === true ? (

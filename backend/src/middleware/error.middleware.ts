@@ -1,13 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger.js';
 
-export interface AppError extends Error {
-  statusCode?: number;
-  isOperational?: boolean;
+export class AppError extends Error {
+  statusCode: number;
+  isOperational: boolean;
+
+  constructor(message: string, statusCode: number = 500) {
+    super(message);
+    this.statusCode = statusCode;
+    this.isOperational = true;
+    Error.captureStackTrace(this, this.constructor);
+  }
 }
 
 export const errorHandler = (
-  err: AppError,
+  err: AppError & { statusCode?: number; stack?: string },
   req: Request,
   res: Response,
   next: NextFunction
@@ -30,15 +37,3 @@ export const errorHandler = (
     },
   });
 };
-
-export class AppError extends Error {
-  statusCode: number;
-  isOperational: boolean;
-
-  constructor(message: string, statusCode: number = 500) {
-    super(message);
-    this.statusCode = statusCode;
-    this.isOperational = true;
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
