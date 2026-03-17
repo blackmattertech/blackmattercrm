@@ -317,7 +317,7 @@ export class CRMService {
         cleanedUpdates.probability = Math.max(0, Math.min(100, cleanedUpdates.probability));
       }
       if (cleanedUpdates.tags !== undefined && Array.isArray(cleanedUpdates.tags)) {
-        cleanedUpdates.tags = cleanedUpdates.tags.filter(tag => tag && tag.trim() !== '');
+        cleanedUpdates.tags = cleanedUpdates.tags.filter((tag: string) => tag && tag.trim() !== '');
       }
 
       const { data, error } = await supabase

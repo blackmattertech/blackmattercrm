@@ -74,7 +74,7 @@ router.post('/signup', async (req, res) => {
         data: {
           full_name: full_name || '',
         },
-        email_redirect_to: undefined, // Disable email confirmation for now
+        emailRedirectTo: undefined, // Disable email confirmation for now
       },
     });
 

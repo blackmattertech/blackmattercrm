@@ -1,5 +1,5 @@
 import express from 'express';
-import { CRMService } from '../services/crm.service.js';
+import { CRMService, type Lead } from '../services/crm.service.js';
 import { authenticate, requireSales } from '../middleware/auth.middleware.js';
 import { logger } from '../utils/logger.js';
 import { z } from 'zod';
@@ -164,9 +164,13 @@ router.post('/leads', requireSales, async (req, res) => {
  */
 router.put('/leads/:id', requireSales, async (req, res) => {
   try {
-    const updates = createLeadSchema.partial().parse(req.body);
+    const parsed = createLeadSchema.partial().parse(req.body);
     const userId = (req as any).user.id;
-    
+    // Normalize null to undefined so updates match Partial<Lead>
+    const updates = Object.fromEntries(
+      Object.entries(parsed).map(([k, v]) => [k, v === null ? undefined : v])
+    ) as Partial<Lead>;
+
     const lead = await CRMService.updateLead(req.params.id, updates, userId);
     res.json({ success: true, data: lead });
   } catch (error) {

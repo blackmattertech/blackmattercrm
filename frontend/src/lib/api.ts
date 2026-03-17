@@ -227,6 +227,7 @@ class ApiClient {
       throw lastError;
     }
 
+    try {
       // Check if response is JSON
       let data: any;
       const contentType = response.headers.get('content-type');
