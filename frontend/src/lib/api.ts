@@ -29,10 +29,17 @@ const getApiUrl = (): string => {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     
-    // For localhost, use localhost
+    // For localhost, use localhost:3001 (standalone backend)
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       const apiUrl = `${protocol}//localhost:3001/api`;
       console.log('[API] Using localhost API URL:', apiUrl);
+      return apiUrl;
+    }
+    
+    // For production (e.g. Netlify): API is same origin at /api (Netlify Function)
+    if (!/^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)) {
+      const apiUrl = `${protocol}//${hostname}${window.location.port ? ':' + window.location.port : ''}/api`;
+      console.log('[API] Using same-origin API URL:', apiUrl);
       return apiUrl;
     }
     

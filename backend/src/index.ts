@@ -26,10 +26,11 @@ import usersRoutes from './routes/users.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { logger } from './utils/logger.js';
 
-// Load environment variables from repo root (centralized .env)
-const rootEnv = path.resolve(__dirname, '..', '..', '.env');
-dotenv.config({ path: rootEnv });
-
+// Load environment variables (from repo root .env when running locally; Netlify injects env at runtime)
+if (!process.env.NETLIFY) {
+  const rootEnv = path.resolve(__dirname, '..', '..', '.env');
+  dotenv.config({ path: rootEnv });
+}
 const requiredEnv = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'] as const;
 for (const key of requiredEnv) {
   if (!process.env[key]) {
@@ -185,22 +186,25 @@ app.use('/api/users', usersRoutes);
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`🚀 Server running on port ${PORT}`);
-  logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`🌐 Access from other devices: http://192.168.1.39:${PORT}`);
-});
+// Export app for Netlify Function; only start listening when running as a standalone server
+export { app };
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, shutting down gracefully');
-  await redis.quit();
-  process.exit(0);
-});
+if (!process.env.NETLIFY) {
+  app.listen(PORT, '0.0.0.0', () => {
+    logger.info(`🚀 Server running on port ${PORT}`);
+    logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info(`🌐 Access from other devices: http://192.168.1.39:${PORT}`);
+  });
 
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received, shutting down gracefully');
-  await redis.quit();
-  process.exit(0);
-});
+  process.on('SIGTERM', async () => {
+    logger.info('SIGTERM received, shutting down gracefully');
+    await redis.quit();
+    process.exit(0);
+  });
+
+  process.on('SIGINT', async () => {
+    logger.info('SIGINT received, shutting down gracefully');
+    await redis.quit();
+    process.exit(0);
+  });
+}

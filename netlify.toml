@@ -1,19 +1,35 @@
-# BlackMatter CRM – Netlify (frontend only)
-# Backend (Express) must be deployed elsewhere (e.g. Render, Railway).
+# BlackMatter CRM – Netlify (frontend + API in same deploy)
+# API runs as a Netlify Function (serverless Express).
+#
+# Required env vars in Netlify: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY,
+# APP_URL (e.g. https://your-site.netlify.app), and any other vars from root .env.
 
 [build]
-  base    = "frontend"
-  command = "npm run build"
-  publish = "dist"
+  base    = "."
+  command = "npm run install:all && npm run build"
+  publish = "frontend/dist"
 
-# Local dev: run "netlify dev" from repo root – starts both frontend (Vite) and backend (Express)
-[dev]
-  command = "npm run dev"
-  port    = 8888
-  targetPort = 5173
+# API and health: proxy to the serverless Express function
+[[redirects]]
+  from    = "/api/*"
+  to      = "/.netlify/functions/server"
+  status  = 200
+  force   = true
 
-# SPA: serve index.html for all routes (if you add URL-based routing later)
+[[redirects]]
+  from    = "/health"
+  to      = "/.netlify/functions/server"
+  status  = 200
+  force   = true
+
+# SPA: serve index.html for all other routes
 [[redirects]]
   from    = "/*"
   to      = "/index.html"
   status  = 200
+
+# Local dev: run "netlify dev" from repo root – starts both frontend and backend
+[dev]
+  command = "npm run dev"
+  port    = 8888
+  targetPort = 5173
