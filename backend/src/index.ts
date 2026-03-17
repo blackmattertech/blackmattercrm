@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -29,8 +30,16 @@ import { logger } from './utils/logger.js';
 const rootEnv = path.resolve(__dirname, '..', '..', '.env');
 dotenv.config({ path: rootEnv });
 
+const requiredEnv = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'] as const;
+for (const key of requiredEnv) {
+  if (!process.env[key]) {
+    console.error(`[FATAL] Missing required environment variable: ${key}`);
+    process.exit(1);
+  }
+}
+
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = parseInt(process.env.PORT || '3001', 10);
 
 // Initialize Supabase client
 export const supabase = createClient(
@@ -119,6 +128,25 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Rate limiting: stricter for auth (brute-force protection), general for API
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // 20 attempts per window per IP
+  message: { success: false, error: 'Too many attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 120, // 120 requests per minute per IP
+  message: { success: false, error: 'Too many requests. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/auth', authLimiter);
+app.use('/api', apiLimiter);
 
 // Health check
 app.get('/health', (req, res) => {

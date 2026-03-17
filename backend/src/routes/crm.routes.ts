@@ -39,6 +39,27 @@ const createLeadSchema = z.object({
   lead_score: z.number().min(0).optional().nullable(),
 });
 
+const createTaskSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional().nullable(),
+  assigned_to: z.union([z.string().uuid(), z.literal(''), z.null()]).optional().nullable(),
+  linked_lead_id: z.union([z.string().uuid(), z.literal(''), z.null()]).optional().nullable(),
+  linked_project_id: z.union([z.string().uuid(), z.literal(''), z.null()]).optional().nullable(),
+  status: z.enum(['pending', 'in-progress', 'completed', 'blocked']).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  due_date: z.string().optional().nullable(),
+  progress: z.number().min(0).max(100).optional().nullable(),
+});
+
+const createFollowupSchema = z.object({
+  lead_id: z.union([z.string().uuid(), z.literal(''), z.null()]).optional().nullable(),
+  customer_id: z.union([z.string().uuid(), z.literal(''), z.null()]).optional().nullable(),
+  type: z.enum(['call', 'email', 'meeting', 'note', 'other']),
+  scheduled_at: z.string().optional().nullable(),
+  completed_at: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
 /**
  * GET /api/crm/leads
  * Get all leads with optional filters
@@ -125,12 +146,7 @@ router.post('/leads', requireSales, async (req, res) => {
         errors: error.errors,
         receivedData: req.body,
       });
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid data', 
-        details: error.errors,
-        receivedData: req.body,
-      });
+      return res.status(400).json({ success: false, error: 'Invalid data', details: error.errors });
     }
     logger.error('Error in POST /leads:', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -138,12 +154,7 @@ router.post('/leads', requireSales, async (req, res) => {
       receivedData: req.body,
     });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to create lead', 
-      message: errorMessage,
-      details: error instanceof Error ? error.stack : undefined,
-    });
+    res.status(500).json({ success: false, error: 'Failed to create lead' });
   }
 });
 
@@ -210,10 +221,20 @@ router.get('/tasks', async (req, res) => {
  */
 router.post('/tasks', async (req, res) => {
   try {
+    const body = createTaskSchema.parse(req.body);
     const userId = (req as any).user.id;
-    const task = await CRMService.createTask(req.body, userId);
+    const taskData = {
+      ...body,
+      assigned_to: body.assigned_to || undefined,
+      linked_lead_id: body.linked_lead_id || undefined,
+      linked_project_id: body.linked_project_id || undefined,
+    };
+    const task = await CRMService.createTask(taskData, userId);
     res.status(201).json({ success: true, data: task });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ success: false, error: 'Invalid data', details: error.errors });
+    }
     logger.error('Error in POST /tasks:', error);
     res.status(500).json({ success: false, error: 'Failed to create task' });
   }
@@ -246,10 +267,19 @@ router.get('/followups', async (req, res) => {
  */
 router.post('/followups', async (req, res) => {
   try {
+    const body = createFollowupSchema.parse(req.body);
     const userId = (req as any).user.id;
-    const followup = await CRMService.createFollowup(req.body, userId);
+    const followupData = {
+      ...body,
+      lead_id: body.lead_id || undefined,
+      customer_id: body.customer_id || undefined,
+    };
+    const followup = await CRMService.createFollowup(followupData, userId);
     res.status(201).json({ success: true, data: followup });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ success: false, error: 'Invalid data', details: error.errors });
+    }
     logger.error('Error in POST /followups:', error);
     res.status(500).json({ success: false, error: 'Failed to create followup' });
   }

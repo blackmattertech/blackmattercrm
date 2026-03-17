@@ -119,6 +119,25 @@ After running schema.sql, verify:
 - [ ] Backend starts without table errors
 - [ ] Can create a user via signup
 
+## Data integrity (optional FKs)
+
+The schema intentionally omits some foreign keys to allow flexible or phased setup:
+
+- **`invoice_items.product_id`** – No FK to `products`; add one when product catalog is stable.
+- **`payments.bank_account_id`** – No FK to `bank_accounts`; add one when bank accounts are in use.
+- **`tasks.linked_project_id`**, **`project_assignments.project_id`**, **`earnings.project_id`** – Reference a “project” concept; add a `projects` table and FKs when that module is implemented.
+
+These can be added later via migrations without breaking existing data.
+
+## Seed data (optional)
+
+There is no mandatory seed script. To create an admin user:
+
+1. Create a user via Supabase Dashboard (Authentication > Users > Add user) or app signup.
+2. Run `backend/src/database/fix_admin_user.sql` (or `create_admin_from_scratch.sql`) in the SQL Editor to set role and approval.
+
+The `npm run seed` script in backend is optional and only documents this; run it with `cd backend && npm run seed` if you want to see the instructions.
+
 ## 🎯 Next Steps After Schema
 
 1. ✅ Tables created

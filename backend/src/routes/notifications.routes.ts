@@ -29,6 +29,28 @@ router.get('/', async (req, res) => {
 });
 
 /**
+ * PUT /api/notifications/read-all
+ * Mark all notifications as read (must be before /:id/read to avoid matching id="read-all")
+ */
+router.put('/read-all', async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+
+    if (error) throw error;
+
+    res.json({ success: true, message: 'All notifications marked as read' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to update notifications' });
+  }
+});
+
+/**
  * PUT /api/notifications/:id/read
  * Mark notification as read
  */
@@ -47,28 +69,6 @@ router.put('/:id/read', async (req, res) => {
     res.json({ success: true, message: 'Notification marked as read' });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Failed to update notification' });
-  }
-});
-
-/**
- * PUT /api/notifications/read-all
- * Mark all notifications as read
- */
-router.put('/read-all', async (req, res) => {
-  try {
-    const userId = (req as any).user.id;
-    
-    const { error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', userId)
-      .eq('is_read', false);
-
-    if (error) throw error;
-
-    res.json({ success: true, message: 'All notifications marked as read' });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to update notifications' });
   }
 });
 

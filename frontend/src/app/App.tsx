@@ -15,17 +15,20 @@ import { Toaster } from "./components/ui/sonner";
 import { toast } from "sonner";
 import { useAuthStore } from "../store/auth.store";
 import { LoadingState } from "./components/LoadingState";
+import { api, notificationsApi } from "../lib/api";
 
 export default function App() {
   const [currentSection, setCurrentSection] = useState<NavSection>("dashboard");
   const [showWelcome, setShowWelcome] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const { isAuthenticated, isLoading, user } = useAuthStore();
 
   useEffect(() => {
     // Initialize auth on mount - this loads from storage first
     const { initialize } = useAuthStore.getState();
     initialize();
-    
+    // On 401, clear session so app shows login
+    api.setOnUnauthorized(() => useAuthStore.getState().logout());
     // Fallback: ensure loading doesn't hang forever
     const timeout = setTimeout(() => {
       const { isLoading } = useAuthStore.getState();
@@ -33,7 +36,6 @@ export default function App() {
         useAuthStore.setState({ isLoading: false });
       }
     }, 15000); // 15 second max loading time
-    
     return () => clearTimeout(timeout);
   }, []); // Empty deps - only run once on mount
 
@@ -45,6 +47,26 @@ export default function App() {
         setShowWelcome(true);
       }
     }
+  }, [isAuthenticated]);
+
+  const refreshUnreadCount = () => {
+    if (!isAuthenticated) return;
+    notificationsApi.getNotifications().then((res) => {
+      if (res.success && Array.isArray(res.data)) {
+        const unread = res.data.filter((n: { is_read?: boolean }) => !n.is_read).length;
+        setUnreadNotificationCount(unread);
+      }
+    }).catch(() => setUnreadNotificationCount(0));
+  };
+
+  useEffect(() => {
+    refreshUnreadCount();
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const handler = () => refreshUnreadCount();
+    window.addEventListener('notifications-updated', handler);
+    return () => window.removeEventListener('notifications-updated', handler);
   }, [isAuthenticated]);
 
   const handleCloseWelcome = () => {
@@ -120,7 +142,7 @@ export default function App() {
       <AppLayout
         currentSection={currentSection}
         onNavigate={setCurrentSection}
-        notificationCount={3}
+        notificationCount={unreadNotificationCount}
         user={user}
       >
         {renderSection()}

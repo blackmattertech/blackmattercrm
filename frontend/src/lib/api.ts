@@ -103,12 +103,17 @@ export interface ApiResponse<T> {
 
 class ApiClient {
   private token: string | null = null;
+  private onUnauthorized: (() => void) | null = null;
 
   constructor() {
     // Load token from localStorage
     if (typeof window !== 'undefined') {
       this.token = localStorage.getItem('auth_token');
     }
+  }
+
+  setOnUnauthorized(callback: () => void) {
+    this.onUnauthorized = callback;
   }
 
   private getBaseURL(): string {
@@ -172,28 +177,55 @@ class ApiClient {
       }
     }
 
-    try {
-      console.log('[API] About to make fetch request:', {
-        url,
-        method: options.method || 'GET',
-        hasBody: !!options.body,
-        hasToken: !!token,
-      });
-      
-      const response = await fetch(url, {
-        ...options,
-        headers,
-        signal: controller.signal,
-      });
-      
-      console.log('[API] Fetch response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-        url: response.url,
-      });
+    const maxAttempts = 2;
+    let lastError: unknown;
+    let response: Response | undefined;
 
-      clearTimeout(timeoutId);
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        if (attempt > 1) {
+          console.log('[API] Retry attempt', attempt, 'for', endpoint);
+        }
+        console.log('[API] About to make fetch request:', {
+          url,
+          method: options.method || 'GET',
+          hasBody: !!options.body,
+          hasToken: !!token,
+        });
+
+        response = await fetch(url, {
+          ...options,
+          headers,
+          signal: controller.signal,
+        });
+
+        console.log('[API] Fetch response received:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          url: response.url,
+        });
+        break;
+      } catch (err) {
+        lastError = err;
+        const isNetworkError = err instanceof Error && (
+          err.name === 'TypeError' ||
+          err.message?.includes('Failed to fetch') ||
+          err.message?.includes('NetworkError') ||
+          err.message?.includes('network')
+        );
+        if (attempt < maxAttempts && isNetworkError) {
+          await new Promise((r) => setTimeout(r, 500));
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    clearTimeout(timeoutId);
+    if (!response) {
+      throw lastError;
+    }
 
       // Check if response is JSON
       let data: any;
@@ -210,10 +242,11 @@ class ApiClient {
       }
 
       if (!response.ok) {
-        // Handle authentication errors
+        // Handle authentication errors: clear session and let app show login
         if (response.status === 401) {
           console.error('[API] 401 Unauthorized - Token may be invalid or expired');
-          // Don't auto-logout here, let the calling code handle it
+          this.setToken(null);
+          if (this.onUnauthorized) this.onUnauthorized();
         } else if (response.status === 403) {
           console.error('[API] 403 Forbidden - Insufficient permissions');
         }
@@ -393,9 +426,19 @@ export const testApiConnection = async (): Promise<{ success: boolean; message: 
       }
     }
     
+    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const isProductionHost = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && !window.location.hostname.match(/^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./);
+    let hint = 'Check if backend is running on port 3001.';
+    if (isLocalhost) {
+      hint = 'Start the backend: run "npm run dev" from project root (starts both) or "cd backend && npm run dev".';
+    } else if (isProductionHost) {
+      hint = 'Set VITE_API_URL in your host (e.g. Netlify env vars) to your backend API URL and rebuild.';
+    } else {
+      hint = 'If backend is on another IP, set localStorage.setItem("backend_ip", "IP") then refresh.';
+    }
     return {
       success: false,
-      message: `Cannot reach backend: ${errorMsg}. Check if backend is running on port 3001.`,
+      message: `Cannot reach backend: ${errorMsg}. ${hint}`,
       apiUrl,
       healthUrl,
     };
