@@ -58,7 +58,7 @@ import {
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../components/ui/dialog";
-import { formatINR, formatINRCompact, formatDate } from "../utils/formatters";
+import { formatINR, formatINRCompact, formatISTDateTime } from "../utils/formatters";
 import { MetricCard } from "../components/MetricCard";
 import { crmApi, usersApi } from "../../lib/api";
 import { toast } from "sonner";
@@ -97,6 +97,9 @@ interface Lead {
   tags?: string[];
   lead_score?: number;
   last_activity_at?: string;
+  avatar_url?: string;
+  image?: string;
+  profile_image?: string;
 }
 
 interface Customer {
@@ -814,6 +817,26 @@ export function CRM() {
     return leads.filter(lead => lead.status === status);
   };
 
+  const getLeadSourceLabel = (lead: Lead) => {
+    const source = (lead.source || "").toLowerCase();
+    const notes = (lead.notes || "").toLowerCase();
+    return source === "website" || notes.includes("source: website") ? "Website" : "Manual";
+  };
+
+  const getSourceTagClasses = (lead: Lead) => {
+    return getLeadSourceLabel(lead) === "Website"
+      ? "bg-logo-pale text-logo-primary border border-logo-light/60"
+      : "bg-muted text-muted-foreground border border-border";
+  };
+
+  const getLeadInterest = (lead: Lead) => {
+    if (lead.tags && lead.tags.length > 0) {
+      return lead.tags.join(", ");
+    }
+    const match = (lead.notes || "").match(/Interests:\s*(.+)/i);
+    return match?.[1]?.trim() || "-";
+  };
+
   // Drag and drop handlers
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -1428,6 +1451,7 @@ export function CRM() {
                         <th className="p-4 text-sm font-medium text-muted-foreground">Value</th>
                         <th className="p-4 text-sm font-medium text-muted-foreground">Status</th>
                         <th className="p-4 text-sm font-medium text-muted-foreground">Source</th>
+                        <th className="p-4 text-sm font-medium text-muted-foreground">Interest</th>
                         <th className="p-4 text-sm font-medium text-muted-foreground">Probability</th>
                         <th className="p-4 text-sm font-medium text-muted-foreground">Assigned</th>
                         <th className="p-4 text-sm font-medium text-muted-foreground">Last Contact</th>
@@ -1437,13 +1461,15 @@ export function CRM() {
                     <tbody>
                       {leads.length === 0 ? (
                         <tr>
-                          <td colSpan={10} className="p-12 text-center text-muted-foreground">
+                          <td colSpan={11} className="p-12 text-center text-muted-foreground">
                             <p className="text-sm">No leads found</p>
                             <p className="text-xs mt-2">Leads will appear here once they are added</p>
                           </td>
                         </tr>
                       ) : (
-                        leads.map((lead) => (
+                        leads.map((lead) => {
+                        const leadAvatar = lead.avatar_url || lead.image || lead.profile_image;
+                        return (
                         <tr 
                           key={lead.id} 
                           className="border-b hover:bg-muted/50 transition-colors cursor-pointer"
@@ -1451,9 +1477,13 @@ export function CRM() {
                         >
                           <td className="p-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-foreground to-foreground/80 flex items-center justify-center text-background font-medium">
-                                {lead.name.split(' ').map(n => n[0]).join('')}
-                              </div>
+                              {leadAvatar ? (
+                                <img
+                                  src={leadAvatar}
+                                  alt={`${lead.name} avatar`}
+                                  className="w-10 h-10 rounded-full object-cover"
+                                />
+                              ) : null}
                               <div>
                                 <p className="font-medium text-sm">{lead.name}</p>
                                 <p className="text-xs text-muted-foreground">{lead.stage}</p>
@@ -1507,7 +1537,12 @@ export function CRM() {
                             </Select>
                           </td>
                           <td className="p-4 text-sm text-muted-foreground">
-                            {lead.source || '-'}
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getSourceTagClasses(lead)}`}>
+                              {getLeadSourceLabel(lead)}
+                            </span>
+                          </td>
+                          <td className="p-4 text-sm text-muted-foreground">
+                            {getLeadInterest(lead)}
                           </td>
                           <td className="p-4">
                             <div className="flex items-center gap-2">
@@ -1523,7 +1558,9 @@ export function CRM() {
                           <td className="p-4 text-sm">
                             {lead.assigned_to_name || lead.assignedTo || 'Unassigned'}
                           </td>
-                          <td className="p-4 text-sm text-muted-foreground">{lead.lastContact}</td>
+                          <td className="p-4 text-sm text-muted-foreground">
+                            {lead.lastContact ? formatISTDateTime(lead.lastContact) : (lead.updated_at ? formatISTDateTime(lead.updated_at) : "-")}
+                          </td>
                           <td className="p-4">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -1548,7 +1585,8 @@ export function CRM() {
                             </DropdownMenu>
                           </td>
                         </tr>
-                        ))
+                        );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -1636,7 +1674,7 @@ export function CRM() {
                         </div>
                         <div className="px-3 py-1 rounded-lg bg-muted text-xs">
                           <span className="text-muted-foreground">Deadline:</span>
-                          <span className="font-medium ml-1">{project.deadline ? formatDate(project.deadline) : 'N/A'}</span>
+                          <span className="font-medium ml-1">{project.deadline ? formatISTDateTime(project.deadline) : 'N/A'}</span>
                         </div>
                       </div>
                     </div>
@@ -1804,7 +1842,7 @@ export function CRM() {
                               </span>
                             </td>
                             <td className="p-4 text-sm text-muted-foreground">
-                              {customer.created_at ? formatDate(customer.created_at) : '-'}
+                              {customer.created_at ? formatISTDateTime(customer.created_at) : '-'}
                             </td>
                             <td className="p-4">
                               <DropdownMenu>
@@ -2208,7 +2246,9 @@ export function CRM() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Source</p>
-                  <p className="text-sm font-medium">{selectedLead.source || '-'}</p>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getSourceTagClasses(selectedLead)}`}>
+                    {getLeadSourceLabel(selectedLead)}
+                  </span>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Industry</p>
@@ -2221,6 +2261,10 @@ export function CRM() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Location</p>
                   <p className="text-sm font-medium">{selectedLead.location || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Interest</p>
+                  <p className="text-sm font-medium">{getLeadInterest(selectedLead)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Probability</p>
@@ -2237,12 +2281,14 @@ export function CRM() {
                 {selectedLead.expected_close_date && (
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Expected Close Date</p>
-                    <p className="text-sm font-medium">{formatDate(selectedLead.expected_close_date)}</p>
+                    <p className="text-sm font-medium">{formatISTDateTime(selectedLead.expected_close_date)}</p>
                   </div>
                 )}
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Last Contact</p>
-                  <p className="text-sm font-medium">{selectedLead.lastContact || selectedLead.updated_at || '-'}</p>
+                  <p className="text-sm font-medium">
+                    {selectedLead.lastContact ? formatISTDateTime(selectedLead.lastContact) : (selectedLead.updated_at ? formatISTDateTime(selectedLead.updated_at) : "-")}
+                  </p>
                 </div>
               </div>
 
@@ -2412,7 +2458,7 @@ export function CRM() {
                         <div className="flex-1">
                           <p className="text-sm font-medium capitalize">{followup.type}</p>
                           <p className="text-xs text-muted-foreground">
-                            {followup.scheduled_at ? formatDate(followup.scheduled_at) : 'Not scheduled'}
+                            {followup.scheduled_at ? formatISTDateTime(followup.scheduled_at) : 'Not scheduled'}
                           </p>
                           {followup.notes && (
                             <p className="text-xs text-muted-foreground mt-1">{followup.notes}</p>
@@ -2454,7 +2500,7 @@ export function CRM() {
                         <div className="flex-1">
                           <p className="text-sm font-medium">{activity.description}</p>
                           <p className="text-xs text-muted-foreground">
-                            {activity.user_name || 'System'} • {activity.created_at ? formatDate(activity.created_at) : ''}
+                            {activity.user_name || 'System'} • {activity.created_at ? formatISTDateTime(activity.created_at) : ''}
                           </p>
                         </div>
                       </div>

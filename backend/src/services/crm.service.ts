@@ -32,6 +32,24 @@ export interface Lead {
   last_activity_at?: string;
 }
 
+interface WebsiteLead {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  field?: string | null;
+  lead_sources?: string[] | null;
+  interests?: string[] | null;
+  estimated_budget?: string | null;
+  project_details: string;
+  agreed_to_terms?: boolean;
+  source?: string | null;
+  user_agent?: string | null;
+  client_ip?: string | null;
+}
+
 export class CRMService {
   /**
    * Get all leads with filters
@@ -45,6 +63,9 @@ export class CRMService {
   }): Promise<{ data: Lead[]; count: number }> {
     try {
       logger.info('CRMService.getLeads - Fetching leads with filters:', filters);
+
+      // Keep website contact submissions visible in CRM by syncing them into leads.
+      await this.syncWebsiteLeadsToLeads();
       
       // First, get the leads
       let query = supabase
@@ -127,6 +148,282 @@ export class CRMService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Sync website contact-form submissions into CRM leads.
+   * Uses website_leads.id as leads.id to keep imports idempotent.
+   */
+  private static async syncWebsiteLeadsToLeads(): Promise<void> {
+    try {
+      const { data: websiteLeads, error: websiteLeadsError } = await supabase
+        .from('website_leads')
+        .select(`
+          id,
+          created_at,
+          updated_at,
+          name,
+          email,
+          phone,
+          field,
+          lead_sources,
+          interests,
+          estimated_budget,
+          project_details,
+          agreed_to_terms,
+          source,
+          user_agent,
+          client_ip
+        `)
+        .order('created_at', { ascending: false })
+        .limit(1000);
+
+      if (websiteLeadsError) {
+        const pgCode = (websiteLeadsError as any)?.code;
+        if (pgCode === '42P01') {
+          logger.warn('CRMService.syncWebsiteLeadsToLeads - website_leads table missing; skipping sync');
+          return;
+        }
+        throw websiteLeadsError;
+      }
+
+      const rows = (websiteLeads || []) as WebsiteLead[];
+      if (rows.length === 0) {
+        logger.info('CRMService.syncWebsiteLeadsToLeads - No website leads to sync');
+        return;
+      }
+
+      const websiteLeadIds = rows.map((row) => row.id);
+      let supportsSourceColumn = true;
+      let { data: existingLeads, error: existingLeadsError }: { data: any[] | null; error: any } = await supabase
+        .from('leads')
+        .select('id, source, status, assigned_to, updated_at, notes, tags')
+        .in('id', websiteLeadIds);
+
+      if (existingLeadsError && this.isMissingColumnError(existingLeadsError)) {
+        supportsSourceColumn = false;
+        logger.warn('CRMService.syncWebsiteLeadsToLeads - leads.source missing, using compatibility mode', this.getDbErrorMeta(existingLeadsError));
+        const fallbackQuery = await supabase
+          .from('leads')
+          .select('id, status, assigned_to, updated_at, notes, tags')
+          .in('id', websiteLeadIds);
+        existingLeads = fallbackQuery.data;
+        existingLeadsError = fallbackQuery.error;
+      }
+
+      if (existingLeadsError) {
+        logger.error('CRMService.syncWebsiteLeadsToLeads - Failed reading existing leads', this.getDbErrorMeta(existingLeadsError));
+        throw existingLeadsError;
+      }
+
+      const existingById = new Map((existingLeads || []).map((lead: any) => [lead.id, lead]));
+
+      const rowsToInsert = rows
+        .filter((row) => !existingById.has(row.id))
+        .map((row) => this.toWebsiteLeadInsertPayload(row));
+
+      let insertedCount = 0;
+      let skippedCount = 0;
+      let fallbackRetryCount = 0;
+      if (rowsToInsert.length > 0) {
+        const insertResult = await this.insertLeadsWithSchemaFallback(rowsToInsert, ['source', 'project_type'], supportsSourceColumn);
+        fallbackRetryCount += insertResult.retries;
+        if (insertResult.error) {
+          logger.error('CRMService.syncWebsiteLeadsToLeads - Insert failed after fallback', {
+            ...this.getDbErrorMeta(insertResult.error),
+            payload_keys: Object.keys(rowsToInsert[0] || {}),
+          });
+          throw insertResult.error;
+        }
+        insertedCount = rowsToInsert.length;
+      }
+
+      // Keep website-origin leads fresh, but never reset already-processed leads.
+      // We only sync updates while lead is still unassigned and in "new" status.
+      let updatedCount = 0;
+      for (const row of rows) {
+        const existingLead: any = existingById.get(row.id);
+        if (!existingLead) {
+          continue;
+        }
+
+        const sourceValue = (existingLead.source || '').toLowerCase();
+        const notesValue = (existingLead.notes || '').toLowerCase();
+        const isWebsiteLead = supportsSourceColumn
+          ? sourceValue === 'website' || notesValue.includes('source: website')
+          : true;
+        const isUnprocessed = existingLead.status === 'new' && !existingLead.assigned_to;
+        if (!isWebsiteLead || !isUnprocessed) {
+          skippedCount += 1;
+          continue;
+        }
+
+        const websiteUpdatedAt = new Date(row.updated_at).getTime();
+        const leadUpdatedAt = new Date(existingLead.updated_at).getTime();
+        const shouldBackfillInterests =
+          Array.isArray(row.interests) &&
+          row.interests.length > 0 &&
+          (!Array.isArray(existingLead.tags) || existingLead.tags.length === 0);
+        if (
+          !Number.isFinite(websiteUpdatedAt) ||
+          !Number.isFinite(leadUpdatedAt) ||
+          (websiteUpdatedAt <= leadUpdatedAt && !shouldBackfillInterests)
+        ) {
+          continue;
+        }
+
+        const { error: updateError } = await supabase
+          .from('leads')
+          .update(this.toWebsiteLeadUpdatePayload(row))
+          .eq('id', row.id);
+
+        if (updateError && this.isMissingColumnError(updateError)) {
+          fallbackRetryCount += 1;
+          const fallbackUpdate = this.stripPayloadColumns(this.toWebsiteLeadUpdatePayload(row), ['source', 'project_type']);
+          const { error: retryError } = await supabase
+            .from('leads')
+            .update(fallbackUpdate)
+            .eq('id', row.id);
+          if (!retryError) {
+            updatedCount += 1;
+          } else {
+            logger.warn('CRMService.syncWebsiteLeadsToLeads - Update fallback failed', this.getDbErrorMeta(retryError));
+          }
+          continue;
+        }
+
+        if (!updateError) {
+          updatedCount += 1;
+        } else {
+          logger.warn('CRMService.syncWebsiteLeadsToLeads - Update failed', this.getDbErrorMeta(updateError));
+        }
+      }
+
+      logger.info('CRMService.syncWebsiteLeadsToLeads - Sync summary', {
+        fetched: rows.length,
+        existing: existingById.size,
+        inserted: insertedCount,
+        updated: updatedCount,
+        skipped: skippedCount,
+        fallback_retries: fallbackRetryCount,
+        compatibility_mode: !supportsSourceColumn,
+      });
+    } catch (error) {
+      // Never block lead listing because of sync issues.
+      logger.warn('CRMService.syncWebsiteLeadsToLeads - Non-fatal sync failure:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        ...(error ? this.getDbErrorMeta(error) : {}),
+      });
+    }
+  }
+
+  private static buildWebsiteLeadNotes(lead: WebsiteLead): string {
+    const lines: string[] = [];
+    lines.push('Source: Website');
+
+    if (lead.project_details?.trim()) {
+      lines.push(`Project details: ${lead.project_details.trim()}`);
+    }
+    if (lead.estimated_budget?.trim()) {
+      lines.push(`Estimated budget: ${lead.estimated_budget.trim()}`);
+    }
+    if (Array.isArray(lead.lead_sources) && lead.lead_sources.length > 0) {
+      lines.push(`Lead sources: ${lead.lead_sources.filter(Boolean).join(', ')}`);
+    }
+    if (Array.isArray(lead.interests) && lead.interests.length > 0) {
+      lines.push(`Interests: ${lead.interests.filter(Boolean).join(', ')}`);
+    }
+
+    lines.push(`Agreed to terms: ${lead.agreed_to_terms ? 'Yes' : 'No'}`);
+
+    if (lead.user_agent?.trim()) {
+      lines.push(`User agent: ${lead.user_agent.trim()}`);
+    }
+    if (lead.client_ip?.trim()) {
+      lines.push(`Client IP: ${lead.client_ip.trim()}`);
+    }
+
+    return lines.join('\n');
+  }
+
+  private static toWebsiteLeadInsertPayload(row: WebsiteLead): Record<string, any> {
+    return {
+      id: row.id,
+      name: row.name?.trim() || 'Website Lead',
+      email: row.email?.trim() || null,
+      phone: row.phone?.trim() || null,
+      value: 0,
+      status: 'new',
+      source: 'Website',
+      project_type: row.field?.trim() || null,
+      tags: Array.isArray(row.interests) ? row.interests.filter(Boolean) : [],
+      notes: this.buildWebsiteLeadNotes(row),
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
+  }
+
+  private static toWebsiteLeadUpdatePayload(row: WebsiteLead): Record<string, any> {
+    return {
+      name: row.name?.trim() || 'Website Lead',
+      email: row.email?.trim() || null,
+      phone: row.phone?.trim() || null,
+      source: 'Website',
+      project_type: row.field?.trim() || null,
+      tags: Array.isArray(row.interests) ? row.interests.filter(Boolean) : [],
+      notes: this.buildWebsiteLeadNotes(row),
+      updated_at: row.updated_at,
+    };
+  }
+
+  private static stripPayloadColumns(payload: Record<string, any>, columnsToDrop: string[]): Record<string, any> {
+    return Object.fromEntries(Object.entries(payload).filter(([key]) => !columnsToDrop.includes(key)));
+  }
+
+  private static async insertLeadsWithSchemaFallback(
+    rows: Record<string, any>[],
+    optionalColumns: string[],
+    supportsSourceColumn: boolean
+  ): Promise<{ error: any | null; retries: number }> {
+    let retries = 0;
+    let payload = supportsSourceColumn ? rows : rows.map((row) => this.stripPayloadColumns(row, ['source']));
+    const columnsToTry = supportsSourceColumn ? [...optionalColumns] : optionalColumns.filter((col) => col !== 'source');
+
+    for (let i = 0; i <= columnsToTry.length; i++) {
+      const { error } = await supabase.from('leads').insert(payload);
+      if (!error) {
+        return { error: null, retries };
+      }
+
+      if (!this.isMissingColumnError(error) || i === columnsToTry.length) {
+        return { error, retries };
+      }
+
+      retries += 1;
+      const column = columnsToTry[i];
+      payload = payload.map((row) => this.stripPayloadColumns(row, [column]));
+      logger.warn('CRMService.syncWebsiteLeadsToLeads - Retrying insert without optional column', {
+        column,
+        retry: retries,
+        ...this.getDbErrorMeta(error),
+      });
+    }
+
+    return { error: null, retries };
+  }
+
+  private static isMissingColumnError(error: any): boolean {
+    const message = (error?.message || '').toLowerCase();
+    return error?.code === '42703' || message.includes('column') && message.includes('does not exist');
+  }
+
+  private static getDbErrorMeta(error: any): Record<string, any> {
+    return {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+    };
   }
 
   /**

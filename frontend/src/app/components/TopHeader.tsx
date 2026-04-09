@@ -88,11 +88,11 @@ export function TopHeader({ currentSection, onNavigate, notificationCount = 0, o
           </button>
           <div className="flex items-center gap-2">
             <img 
-              src="/scissorlogo.png" 
+              src="/logo.svg" 
               alt="BlackMatter ERP" 
               className="w-8 h-8 object-contain"
             />
-            <span className="hidden sm:inline-block font-medium text-lg">ERP</span>
+            <span className="hidden sm:inline-block font-medium text-lg">BlackMatter CRM</span>
           </div>
         </div>
 

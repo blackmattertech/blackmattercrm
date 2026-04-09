@@ -3,10 +3,9 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useAuthStore } from "../../store/auth.store";
-import { Loader2, Mail, Lock, UserPlus, AlertCircle } from "lucide-react";
+import { Loader2, Mail, Lock, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { testApiConnection } from "../../lib/api";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -14,33 +13,8 @@ export function LoginPage() {
   const [fullName, setFullName] = useState("");
   const [isSignup, setIsSignup] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<{ testing: boolean; success: boolean | null; message: string }>({
-    testing: false,
-    success: null,
-    message: '',
-  });
 
   const { login, signup, isLoading, error } = useAuthStore();
-
-  const testConnection = async () => {
-    setConnectionStatus({ testing: true, success: null, message: 'Testing connection...' });
-    const result = await testApiConnection();
-    setConnectionStatus({
-      testing: false,
-      success: result.success,
-      message: result.message,
-    });
-    if (!result.success) {
-      console.error('[Login] Backend connection test failed:', result);
-    } else {
-      console.log('[Login] Backend connection test passed:', result);
-    }
-  };
-
-  // Test backend connection on mount
-  useEffect(() => {
-    testConnection();
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,51 +69,15 @@ export function LoginPage() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4">
             <img 
-              src="/scissorlogo.png" 
+              src="/logo.svg" 
               alt="BlackMatter ERP Logo" 
               className="w-16 h-16 object-contain"
             />
           </div>
-          <h1 className="text-3xl font-medium mb-2">BlackMatter ERP</h1>
+          <h1 className="text-3xl font-medium mb-2">BlackMatter CRM</h1>
           <p className="text-sm text-muted-foreground">
             Sign in to your account
           </p>
-          {/* Connection Status */}
-          {connectionStatus.testing ? (
-            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              {connectionStatus.message}
-            </div>
-          ) : connectionStatus.success === false ? (
-            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <p className="font-medium mb-1">Connection issue</p>
-                <p className="text-xs">{connectionStatus.message}</p>
-                {typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? (
-                  <p className="text-xs mt-2">
-                    From project root run <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">npm run dev</code> (starts backend + frontend), then open this page again.
-                  </p>
-                ) : typeof window !== 'undefined' && !/^localhost|^127\.0\.0\.1|^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(window.location.hostname) ? (
-                  <p className="text-xs mt-2">
-                    API runs on this same site (Netlify Function). Remove <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">VITE_API_URL</code> from Netlify env if set. In Netlify set <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">SUPABASE_URL</code>, <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code>, <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">SUPABASE_ANON_KEY</code>, <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">APP_URL</code>, <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded">JWT_SECRET</code>, then redeploy. Check Netlify → Functions for errors.
-                  </p>
-                ) : (
-                  <p className="text-xs mt-2">
-                    Backend on another IP: <code className="bg-red-100 dark:bg-red-900/30 px-1 rounded text-xs">localStorage.setItem(&apos;backend_ip&apos;, &apos;192.168.1.39&apos;)</code> then refresh.
-                  </p>
-                )}
-                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={testConnection} disabled={connectionStatus.testing}>
-                  {connectionStatus.testing ? 'Testing…' : 'Retry connection'}
-                </Button>
-              </div>
-            </div>
-          ) : connectionStatus.success === true ? (
-            <div className="mt-4 p-2 bg-logo-pale dark:bg-logo-primary/20 border border-logo-light dark:border-logo-light/50 rounded-lg text-xs text-logo-primary dark:text-logo-light flex items-center gap-2">
-              <div className="w-2 h-2 bg-logo-primary rounded-full"></div>
-              Backend connected
-            </div>
-          ) : null}
         </div>
 
         {/* Login/Signup Card */}

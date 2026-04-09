@@ -63,7 +63,7 @@ export function WelcomeScreen({ onClose }: WelcomeScreenProps) {
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-6">
             <img 
-              src="/scissorlogo.png" 
+              src="/logo.svg" 
               alt="BlackMatter ERP Logo" 
               className="w-20 h-20 object-contain"
             />

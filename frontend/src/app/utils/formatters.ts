@@ -78,6 +78,34 @@ export function formatIndianDateTime(date: string | Date): string {
 }
 
 /**
+ * Formats date-time in IST as DD-MMM-YY HH:MM AM/PM.
+ * Example: 09-Apr-26 04:35 PM
+ */
+export function formatISTDateTime(date: string | Date): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return '-';
+
+  const parts = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    day: '2-digit',
+    month: 'short',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).formatToParts(d);
+
+  const day = parts.find((p) => p.type === 'day')?.value ?? '--';
+  const month = parts.find((p) => p.type === 'month')?.value ?? '---';
+  const year = parts.find((p) => p.type === 'year')?.value ?? '--';
+  const hour = parts.find((p) => p.type === 'hour')?.value ?? '--';
+  const minute = parts.find((p) => p.type === 'minute')?.value ?? '--';
+  const period = parts.find((p) => p.type === 'dayPeriod')?.value?.toUpperCase() ?? '--';
+
+  return `${day}-${month}-${year} ${hour}:${minute} ${period}`;
+}
+
+/**
  * Formats a relative time in Indian context (e.g., "2 hours ago", "Yesterday")
  * @param date - Date string or Date object
  * @returns Relative time string
