@@ -3,7 +3,7 @@ import { TopHeader } from "./TopHeader";
 import { MobileMenu } from "./MobileMenu";
 import { User } from "../../store/auth.store";
 
-export type NavSection = "dashboard" | "crm" | "accounts" | "products" | "marketing" | "teams" | "notifications" | "settings";
+export type NavSection = "dashboard" | "crm" | "accounts" | "products" | "marketing" | "blogs" | "teams" | "notifications" | "settings";
 
 interface AppLayoutProps {
   children: ReactNode;

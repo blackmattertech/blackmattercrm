@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { AppLayout, NavSection } from "./components/AppLayout";
 import { QuickActions } from "./components/QuickActions";
-import { WelcomeScreen } from "./components/WelcomeScreen";
 import { LoginPage } from "./components/LoginPage";
 import { Dashboard } from "./modules/Dashboard";
 import { CRM } from "./modules/CRM";
 import { Accounts } from "./modules/Accounts";
 import { Products } from "./modules/Products";
 import { Marketing } from "./modules/Marketing";
+import { Blogs } from "./modules/Blogs";
 import { Teams } from "./modules/Teams";
 import { Notifications } from "./modules/Notifications";
 import { Settings } from "./modules/Settings";
@@ -19,7 +19,6 @@ import { api, notificationsApi } from "../lib/api";
 
 export default function App() {
   const [currentSection, setCurrentSection] = useState<NavSection>("dashboard");
-  const [showWelcome, setShowWelcome] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const { isAuthenticated, isLoading, user } = useAuthStore();
 
@@ -28,7 +27,7 @@ export default function App() {
     const { initialize } = useAuthStore.getState();
     initialize();
     // On 401, clear session so app shows login
-    api.setOnUnauthorized(() => useAuthStore.getState().logout());
+    api.setOnUnauthorized(() => useAuthStore.getState().logout({ skipServerCall: true, reason: 'api-401' }));
     // Fallback: ensure loading doesn't hang forever
     const timeout = setTimeout(() => {
       const { isLoading } = useAuthStore.getState();
@@ -38,16 +37,6 @@ export default function App() {
     }, 15000); // 15 second max loading time
     return () => clearTimeout(timeout);
   }, []); // Empty deps - only run once on mount
-
-  useEffect(() => {
-    // Show welcome screen on first visit (only if authenticated)
-    if (isAuthenticated) {
-      const hasVisited = localStorage.getItem("erp_has_visited");
-      if (!hasVisited) {
-        setShowWelcome(true);
-      }
-    }
-  }, [isAuthenticated]);
 
   const refreshUnreadCount = () => {
     if (!isAuthenticated) return;
@@ -69,12 +58,6 @@ export default function App() {
     return () => window.removeEventListener('notifications-updated', handler);
   }, [isAuthenticated]);
 
-  const handleCloseWelcome = () => {
-    setShowWelcome(false);
-    localStorage.setItem("erp_has_visited", "true");
-    toast.success("Welcome! Let's get started.");
-  };
-
   const renderSection = () => {
     switch (currentSection) {
       case "dashboard":
@@ -87,6 +70,8 @@ export default function App() {
         return <Products />;
       case "marketing":
         return <Marketing />;
+      case "blogs":
+        return <Blogs />;
       case "teams":
         return <Teams />;
       case "notifications":
@@ -138,7 +123,6 @@ export default function App() {
   // Main app (authenticated)
   return (
     <>
-      {showWelcome && <WelcomeScreen onClose={handleCloseWelcome} />}
       <AppLayout
         currentSection={currentSection}
         onNavigate={setCurrentSection}

@@ -41,6 +41,12 @@ for (const key of requiredEnv) {
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
+const trustProxy = process.env.TRUST_PROXY;
+if (trustProxy === 'true') {
+  app.set('trust proxy', 1);
+} else if (trustProxy && !Number.isNaN(Number(trustProxy))) {
+  app.set('trust proxy', Number(trustProxy));
+}
 
 // Initialize Supabase client
 export const supabase = createClient(
@@ -131,12 +137,34 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Rate limiting: stricter for auth (brute-force protection), general for API
+const limiterHandler = (label: string) => (req: express.Request, res: express.Response) => {
+  logger.warn(`${label} rate limit exceeded`, {
+    path: req.path,
+    method: req.method,
+    ip: req.ip,
+    forwardedFor: req.headers['x-forwarded-for'],
+  });
+  return res.status(429).json({
+    success: false,
+    error: label === 'auth' ? 'Too many attempts. Please try again later.' : 'Too many requests. Please slow down.',
+  });
+};
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // 20 attempts per window per IP
   message: { success: false, error: 'Too many attempts. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
+  handler: limiterHandler('auth'),
+});
+const authMeLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 240, // allow frequent auth checks without lockouts
+  message: { success: false, error: 'Too many requests. Please slow down.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: limiterHandler('auth-me'),
 });
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
@@ -144,9 +172,13 @@ const apiLimiter = rateLimit({
   message: { success: false, error: 'Too many requests. Please slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
+  handler: limiterHandler('api'),
+  skip: (req) => req.path.startsWith('/api/auth'),
 });
 
-app.use('/api/auth', authLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/signup', authLimiter);
+app.use('/api/auth/me', authMeLimiter);
 app.use('/api', apiLimiter);
 
 // Health check
@@ -206,5 +238,19 @@ if (!process.env.NETLIFY) {
     logger.info('SIGINT received, shutting down gracefully');
     await redis.quit();
     process.exit(0);
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    logger.error('Unhandled promise rejection', { reason });
+  });
+
+  process.on('uncaughtException', async (error) => {
+    logger.error('Uncaught exception, shutting down', { error: error?.message, stack: error?.stack });
+    try {
+      await redis.quit();
+    } catch (e) {
+      logger.error('Error while closing Redis during uncaughtException', e);
+    }
+    process.exit(1);
   });
 }
