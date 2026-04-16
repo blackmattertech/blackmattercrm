@@ -5,6 +5,7 @@ import {
   DollarSign,
   Package,
   Megaphone,
+  Newspaper,
   UserSquare2,
   Bell,
   Settings,
@@ -41,6 +42,7 @@ const navItems = [
   { id: "accounts" as const, label: "Accounts", icon: DollarSign },
   { id: "products" as const, label: "Products", icon: Package },
   { id: "marketing" as const, label: "Marketing", icon: Megaphone },
+  { id: "blogs" as const, label: "Blogs", icon: Newspaper },
   { id: "teams" as const, label: "Teams", icon: UserSquare2 },
   { id: "settings" as const, label: "Settings", icon: Settings },
 ];

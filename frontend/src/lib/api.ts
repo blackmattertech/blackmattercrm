@@ -93,6 +93,7 @@ export interface ApiResponse<T> {
 class ApiClient {
   private token: string | null = null;
   private onUnauthorized: (() => void) | null = null;
+  private unauthorizedInProgress = false;
 
   constructor() {
     // Load token from localStorage
@@ -103,6 +104,19 @@ class ApiClient {
 
   setOnUnauthorized(callback: () => void) {
     this.onUnauthorized = callback;
+  }
+
+  private triggerUnauthorized() {
+    if (this.unauthorizedInProgress) return;
+    this.unauthorizedInProgress = true;
+    this.setToken(null);
+    if (this.onUnauthorized) {
+      this.onUnauthorized();
+    }
+    // Allow future unauthorized events after current loop settles
+    setTimeout(() => {
+      this.unauthorizedInProgress = false;
+    }, 1000);
   }
 
   private getBaseURL(): string {
@@ -166,7 +180,9 @@ class ApiClient {
       }
     }
 
-    const maxAttempts = 2;
+    const method = (options.method || 'GET').toUpperCase();
+    const isIdempotentMethod = method === 'GET' || method === 'HEAD';
+    const maxAttempts = isIdempotentMethod ? 3 : 1;
     let lastError: unknown;
     let response: Response | undefined;
 
@@ -204,7 +220,9 @@ class ApiClient {
           err.message?.includes('network')
         );
         if (attempt < maxAttempts && isNetworkError) {
-          await new Promise((r) => setTimeout(r, 500));
+          const jitterMs = Math.floor(Math.random() * 120);
+          const delayMs = 300 * Math.pow(2, attempt - 1) + jitterMs;
+          await new Promise((r) => setTimeout(r, delayMs));
           continue;
         }
         throw err;
@@ -235,10 +253,22 @@ class ApiClient {
         // Handle authentication errors: clear session and let app show login
         if (response.status === 401) {
           console.error('[API] 401 Unauthorized - Token may be invalid or expired');
-          this.setToken(null);
-          if (this.onUnauthorized) this.onUnauthorized();
+          this.triggerUnauthorized();
         } else if (response.status === 403) {
           console.error('[API] 403 Forbidden - Insufficient permissions');
+        } else if (response.status === 429) {
+          const retryAfter = response.headers.get('retry-after');
+          const retryAfterSeconds = retryAfter ? Number(retryAfter) : NaN;
+          const retryAfterText =
+            Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+              ? ` Retry after ${retryAfterSeconds} seconds.`
+              : '';
+          return {
+            success: false,
+            error: (data.error || data.message || 'Too many requests.') + retryAfterText,
+            details: data.details,
+            status: response.status,
+          };
         }
         
         // Log error details in development
@@ -327,6 +357,74 @@ class ApiClient {
 
   async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'DELETE' });
+  }
+
+  async uploadFormData<T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> {
+    const apiUrl = getApiUrl();
+    const url = `${apiUrl}${endpoint}`;
+    const token = this.getToken() || (typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null);
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      const contentType = response.headers.get('content-type');
+      let data: any;
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        return {
+          success: false,
+          error: `Server returned non-JSON response: ${response.status} ${response.statusText}`,
+          details: text,
+          status: response.status,
+        };
+      }
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.triggerUnauthorized();
+        }
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('retry-after');
+          const retryAfterSeconds = retryAfter ? Number(retryAfter) : NaN;
+          const retryAfterText =
+            Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+              ? ` Retry after ${retryAfterSeconds} seconds.`
+              : '';
+          return {
+            success: false,
+            error: (data.error || data.message || 'Too many requests.') + retryAfterText,
+            details: data.details,
+            status: response.status,
+          };
+        }
+        return {
+          success: false,
+          error: data.error || data.message || 'Upload failed',
+          details: data.details,
+          status: response.status,
+        };
+      }
+
+      return {
+        success: true,
+        ...data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error during upload',
+      };
+    }
   }
 }
 
@@ -483,6 +581,22 @@ export const crmApi = {
     const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
     return api.get<{ data: any[]; count: number }>(`/crm/activities${queryString}`);
   },
+  uploadBlogImage: async (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return api.uploadFormData('/crm/blogs/upload-image', formData);
+  },
+  getBlogs: (params?: any) => {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return api.get<{ data: any[]; count: number }>(`/crm/blogs${queryString}`);
+  },
+  getBlog: (id: string) => api.get<any>(`/crm/blogs/${id}`),
+  createBlog: (data: any) => api.post<any>('/crm/blogs', data),
+  updateBlog: (id: string, data: any) => api.put<any>(`/crm/blogs/${id}`, data),
+  deleteBlog: (id: string) => api.delete(`/crm/blogs/${id}`),
+  publishBlog: (id: string) => api.put<any>(`/crm/blogs/${id}/publish`),
+  getBlogCategories: () => api.get<any[]>('/crm/blog-categories'),
+  createBlogCategory: (name: string) => api.post<any>('/crm/blog-categories', { name }),
 };
 
 // Dashboard API
@@ -517,64 +631,7 @@ export const usersApi = {
   uploadAvatar: async (id: string, file: File) => {
     const formData = new FormData();
     formData.append('avatar', file);
-    
-    const apiUrl = getApiUrl();
-    const url = `${apiUrl}/users/${id}/avatar`;
-    const token = api.getToken() || (typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null);
-    const headers: HeadersInit = {};
-    
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    // Don't set Content-Type - let browser set it with boundary for multipart/form-data
-    
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: formData,
-      });
-
-      const contentType = response.headers.get('content-type');
-      let data: any;
-      
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const text = await response.text();
-        console.error('[API] Non-JSON response for avatar upload:', text);
-        return {
-          success: false,
-          error: `Server returned non-JSON response: ${response.status} ${response.statusText}`,
-        };
-      }
-
-      if (!response.ok) {
-        if ((import.meta as any).env?.MODE === 'development') {
-          console.error('[API] Avatar upload error:', {
-            status: response.status,
-            statusText: response.statusText,
-            url,
-            data,
-          });
-        }
-        return {
-          success: false,
-          error: data.error || data.message || 'Upload failed',
-        };
-      }
-
-      return {
-        success: true,
-        ...data,
-      };
-    } catch (error) {
-      console.error('[API] Avatar upload network error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Network error during upload',
-      };
-    }
+    return api.uploadFormData(`/users/${id}/avatar`, formData);
   },
   updateDirectorStatus: (id: string, data: { is_director?: boolean; equity_ratio?: number }) =>
     api.put<any>(`/users/${id}/director`, data),

@@ -1,10 +1,28 @@
 import express from 'express';
+import multer from 'multer';
 import { CRMService, type Lead } from '../services/crm.service.js';
 import { authenticate, requireSales } from '../middleware/auth.middleware.js';
+import { supabase } from '../index.js';
 import { logger } from '../utils/logger.js';
 import { z } from 'zod';
 
 const router = express.Router();
+
+// Configure multer for blog image uploads (memory storage)
+const blogImageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only images are allowed.'));
+    }
+  },
+});
 
 // All routes require authentication
 router.use(authenticate);
@@ -58,6 +76,456 @@ const createFollowupSchema = z.object({
   scheduled_at: z.string().optional().nullable(),
   completed_at: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+});
+
+const blogStatusSchema = z.enum(['draft', 'in_review', 'scheduled', 'published', 'archived']);
+const blogSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  slug: z.string().min(1, 'Slug is required'),
+  excerpt: z.string().optional().nullable().or(z.literal('')),
+  content: z.string().optional().nullable().or(z.literal('')),
+  featured_image_url: z.string().optional().nullable().or(z.literal('')),
+  cover_image_url: z.string().optional().nullable().or(z.literal('')),
+  category_id: z.string().optional().nullable().or(z.literal('')),
+  category_name: z.string().optional().nullable().or(z.literal('')),
+  category: z.string().optional().nullable().or(z.literal('')),
+  tags: z.array(z.string()).optional().nullable(),
+  status: blogStatusSchema.default('draft'),
+  scheduled_at: z.string().optional().nullable().or(z.literal('')),
+  published_at: z.string().optional().nullable().or(z.literal('')),
+  is_published: z.boolean().optional().nullable(),
+  seo_title: z.string().optional().nullable().or(z.literal('')),
+  seo_description: z.string().optional().nullable().or(z.literal('')),
+});
+
+const isMissingColumnError = (error: any) => {
+  const message = (error?.message || '').toLowerCase();
+  return error?.code === '42703' || (message.includes('column') && message.includes('does not exist'));
+};
+
+const isMissingTableError = (error: any) => {
+  const message = (error?.message || '').toLowerCase();
+  return (
+    error?.code === '42P01' ||
+    error?.code === 'PGRST205' ||
+    message.includes('relation') && message.includes('does not exist') ||
+    message.includes('could not find the table')
+  );
+};
+
+const stripColumns = (payload: Record<string, any>, columns: string[]) => {
+  return Object.fromEntries(Object.entries(payload).filter(([key]) => !columns.includes(key)));
+};
+
+const isUuid = (value?: string | null) => {
+  if (!value) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+};
+
+const tryInsertWithFallback = async (payload: Record<string, any>) => {
+  const removable = ['is_published', 'seo_title', 'seo_description', 'featured_image_url', 'cover_image_url', 'excerpt', 'content', 'category_id', 'category', 'tags', 'scheduled_at', 'published_at', 'status', 'author_id', 'author_name'];
+  let current = { ...payload };
+  for (let i = 0; i <= removable.length; i++) {
+    const { data, error } = await supabase.from('blogs').insert(current).select('*').single();
+    if (!error) return { data, error: null };
+    if (!isMissingColumnError(error) || i === removable.length) return { data: null, error };
+    current = stripColumns(current, [removable[i]]);
+  }
+  return { data: null, error: new Error('Insert fallback exhausted') };
+};
+
+const tryUpdateWithFallback = async (id: string, payload: Record<string, any>) => {
+  const removable = ['is_published', 'seo_title', 'seo_description', 'featured_image_url', 'cover_image_url', 'excerpt', 'content', 'category_id', 'category', 'tags', 'scheduled_at', 'published_at', 'status', 'author_name'];
+  let current = { ...payload };
+  for (let i = 0; i <= removable.length; i++) {
+    const { data, error } = await supabase.from('blogs').update(current).eq('id', id).select('*').single();
+    if (!error) return { data, error: null };
+    if (!isMissingColumnError(error) || i === removable.length) return { data: null, error };
+    current = stripColumns(current, [removable[i]]);
+  }
+  return { data: null, error: new Error('Update fallback exhausted') };
+};
+
+const ensureBlogCategory = async (categoryName?: string | null): Promise<string | null> => {
+  const trimmed = (categoryName || '').trim();
+  if (!trimmed) return null;
+
+  const { data: existing, error: existingError } = await supabase
+    .from('blog_categories')
+    .select('id, name')
+    .ilike('name', trimmed)
+    .limit(1)
+    .maybeSingle();
+
+  if (!existingError && existing?.id) return existing.id;
+
+  if (existingError && !isMissingTableError(existingError)) throw existingError;
+  if (existingError && isMissingTableError(existingError)) return null;
+
+  const slug = trimmed
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+
+  const { data: created, error: createError } = await supabase
+    .from('blog_categories')
+    .insert({ name: trimmed, slug })
+    .select('id')
+    .single();
+
+  if (createError) {
+    if (isMissingTableError(createError)) return null;
+    throw createError;
+  }
+
+  return created?.id || null;
+};
+
+/**
+ * POST /api/crm/blogs/upload-image
+ * Upload blog featured image to Supabase storage
+ */
+router.post('/blogs/upload-image', requireSales, blogImageUpload.single('image'), async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ success: false, error: 'No image file uploaded' });
+    }
+
+    const extension = file.originalname.split('.').pop()?.toLowerCase() || 'jpg';
+    const safeExtension = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(extension) ? extension : 'jpg';
+    const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${safeExtension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('blog-images')
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      logger.error('Error uploading blog image:', uploadError);
+      return res.status(500).json({ success: false, error: 'Failed to upload blog image' });
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('blog-images')
+      .getPublicUrl(filePath);
+
+    return res.json({
+      success: true,
+      data: {
+        path: filePath,
+        url: urlData.publicUrl,
+      },
+    });
+  } catch (error) {
+    logger.error('Error in POST /crm/blogs/upload-image:', error);
+    return res.status(500).json({ success: false, error: 'Failed to upload blog image' });
+  }
+});
+
+/**
+ * GET /api/crm/blogs
+ * Get all blogs with optional filters
+ */
+router.get('/blogs', async (req, res) => {
+  try {
+    const { status, search, category_id, limit, offset } = req.query as Record<string, string>;
+    let query = supabase.from('blogs').select('*', { count: 'exact' }).order('updated_at', { ascending: false });
+
+    if (status) query = query.eq('status', status);
+    if (category_id) query = query.eq('category_id', category_id);
+    if (search) query = query.or(`title.ilike.%${search}%,slug.ilike.%${search}%,excerpt.ilike.%${search}%`);
+    if (limit) query = query.limit(parseInt(limit, 10));
+    if (offset && limit) query = query.range(parseInt(offset, 10), parseInt(offset, 10) + parseInt(limit, 10) - 1);
+
+    const { data, error, count } = await query;
+    if (error) {
+      if (isMissingTableError(error)) {
+        logger.warn('GET /blogs - blogs table missing, returning empty list');
+        return res.json({ success: true, data: [], count: 0 });
+      }
+      throw error;
+    }
+
+    res.json({ success: true, data: data || [], count: count || 0 });
+  } catch (error) {
+    logger.error('Error in GET /blogs:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch blogs' });
+  }
+});
+
+/**
+ * GET /api/crm/blogs/:id
+ * Get blog by ID
+ */
+router.get('/blogs/:id', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('blogs').select('*').eq('id', req.params.id).single();
+    if (error) {
+      if ((error as any).code === 'PGRST116') {
+        return res.status(404).json({ success: false, error: 'Blog not found' });
+      }
+      throw error;
+    }
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('Error in GET /blogs/:id:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch blog' });
+  }
+});
+
+/**
+ * POST /api/crm/blogs
+ * Create new blog
+ */
+router.post('/blogs', requireSales, async (req, res) => {
+  try {
+    const parsed = blogSchema.parse(req.body);
+    const authUser = (req as any).user || {};
+    const userId = authUser.id;
+    const now = new Date().toISOString();
+    const authorName = (authUser.full_name || authUser.email || 'Unknown Author').trim();
+    const categoryLabel = (parsed.category_name || parsed.category || 'General').trim() || 'General';
+    const categoryId = isUuid(parsed.category_id) ? parsed.category_id : (await ensureBlogCategory(categoryLabel));
+
+    const payload: Record<string, any> = {
+      title: parsed.title.trim(),
+      slug: parsed.slug.trim(),
+      excerpt: parsed.excerpt || null,
+      content: parsed.content || null,
+      featured_image_url: parsed.featured_image_url || null,
+      cover_image_url: parsed.cover_image_url || parsed.featured_image_url || '',
+      category_id: categoryId || null,
+      category: categoryLabel,
+      tags: parsed.tags || [],
+      status: parsed.status || 'draft',
+      scheduled_at: parsed.scheduled_at || null,
+      published_at: parsed.published_at || null,
+      is_published: parsed.is_published ?? parsed.status === 'published',
+      seo_title: parsed.seo_title || null,
+      seo_description: parsed.seo_description || null,
+      author_id: userId,
+      author_name: authorName,
+      created_at: now,
+      updated_at: now,
+    };
+
+    const result = await tryInsertWithFallback(payload);
+    if (result.error) {
+      if (isMissingTableError(result.error)) {
+        return res.status(500).json({
+          success: false,
+          error: 'Blogs table is missing. Run blog schema migration first.',
+          code: (result.error as any)?.code,
+        });
+      }
+      throw result.error;
+    }
+
+    res.status(201).json({ success: true, data: result.data });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ success: false, error: 'Invalid data', details: error.errors });
+    }
+    logger.error('Error in POST /blogs:', error);
+    const err = error as any;
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to create blog',
+      code: err?.code,
+      details: err?.details,
+      hint: err?.hint,
+    });
+  }
+});
+
+/**
+ * PUT /api/crm/blogs/:id
+ * Update blog
+ */
+router.put('/blogs/:id', requireSales, async (req, res) => {
+  try {
+    const parsed = blogSchema.partial().parse(req.body);
+    const authUser = (req as any).user || {};
+    const authorName = (authUser.full_name || authUser.email || 'Unknown Author').trim();
+    const updates: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+      author_name: authorName,
+    };
+    const categoryLabel = (parsed.category_name || parsed.category || '').trim();
+    const categoryId = isUuid(parsed.category_id) ? parsed.category_id : (await ensureBlogCategory(categoryLabel));
+
+    if (parsed.title !== undefined) updates.title = parsed.title?.trim();
+    if (parsed.slug !== undefined) updates.slug = parsed.slug?.trim();
+    if (parsed.excerpt !== undefined) updates.excerpt = parsed.excerpt || null;
+    if (parsed.content !== undefined) updates.content = parsed.content || null;
+    if (parsed.featured_image_url !== undefined) updates.featured_image_url = parsed.featured_image_url || null;
+    if (parsed.cover_image_url !== undefined || parsed.featured_image_url !== undefined) {
+      updates.cover_image_url = parsed.cover_image_url || parsed.featured_image_url || '';
+    }
+    if (parsed.category_id !== undefined || parsed.category_name !== undefined || parsed.category !== undefined) {
+      updates.category_id = categoryId || null;
+      updates.category = categoryLabel || 'General';
+    }
+    if (parsed.tags !== undefined) updates.tags = parsed.tags || [];
+    if (parsed.status !== undefined) updates.status = parsed.status;
+    if (parsed.scheduled_at !== undefined) updates.scheduled_at = parsed.scheduled_at || null;
+    if (parsed.published_at !== undefined) updates.published_at = parsed.published_at || null;
+    if (parsed.is_published !== undefined) updates.is_published = parsed.is_published;
+    if (parsed.seo_title !== undefined) updates.seo_title = parsed.seo_title || null;
+    if (parsed.seo_description !== undefined) updates.seo_description = parsed.seo_description || null;
+
+    const result = await tryUpdateWithFallback(req.params.id, updates);
+    if (result.error) {
+      if (isMissingTableError(result.error)) {
+        return res.status(500).json({
+          success: false,
+          error: 'Blogs table is missing. Run blog schema migration first.',
+          code: (result.error as any)?.code,
+        });
+      }
+      throw result.error;
+    }
+
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ success: false, error: 'Invalid data', details: error.errors });
+    }
+    logger.error('Error in PUT /blogs/:id:', error);
+    const err = error as any;
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to update blog',
+      code: err?.code,
+      details: err?.details,
+      hint: err?.hint,
+    });
+  }
+});
+
+/**
+ * PUT /api/crm/blogs/:id/publish
+ * Mark blog as published and set is_published=true
+ */
+router.put('/blogs/:id/publish', requireSales, async (req, res) => {
+  try {
+    const now = new Date().toISOString();
+    const updates: Record<string, any> = {
+      status: 'published',
+      is_published: true,
+      published_at: now,
+      updated_at: now,
+    };
+    const result = await tryUpdateWithFallback(req.params.id, updates);
+    if (result.error) {
+      if (isMissingTableError(result.error)) {
+        return res.status(500).json({
+          success: false,
+          error: 'Blogs table is missing. Run blog schema migration first.',
+          code: (result.error as any)?.code,
+        });
+      }
+      throw result.error;
+    }
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    logger.error('Error in PUT /blogs/:id/publish:', error);
+    const err = error as any;
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to publish blog',
+      code: err?.code,
+      details: err?.details,
+      hint: err?.hint,
+    });
+  }
+});
+
+/**
+ * DELETE /api/crm/blogs/:id
+ * Delete blog
+ */
+router.delete('/blogs/:id', requireSales, async (req, res) => {
+  try {
+    const { error } = await supabase.from('blogs').delete().eq('id', req.params.id);
+    if (error) {
+      if (isMissingTableError(error)) {
+        return res.status(500).json({
+          success: false,
+          error: 'Blogs table is missing. Run blog schema migration first.',
+          code: (error as any)?.code,
+        });
+      }
+      throw error;
+    }
+    res.json({ success: true, message: 'Blog deleted successfully' });
+  } catch (error) {
+    logger.error('Error in DELETE /blogs/:id:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete blog' });
+  }
+});
+
+/**
+ * GET /api/crm/blog-categories
+ * Get blog categories
+ */
+router.get('/blog-categories', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('blog_categories').select('*').order('name', { ascending: true });
+    if (error) {
+      if (isMissingTableError(error) || isMissingColumnError(error)) {
+        return res.json({ success: true, data: [] });
+      }
+      throw error;
+    }
+    res.json({ success: true, data: data || [] });
+  } catch (error) {
+    logger.error('Error in GET /blog-categories:', error);
+    const err = error as any;
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to fetch blog categories',
+      code: err?.code,
+      details: err?.details,
+      hint: err?.hint,
+    });
+  }
+});
+
+/**
+ * POST /api/crm/blog-categories
+ * Create blog category (or return existing match)
+ */
+router.post('/blog-categories', requireSales, async (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'Category name is required' });
+    }
+    const id = await ensureBlogCategory(name);
+    if (!id) {
+      return res.status(500).json({ success: false, error: 'Failed to ensure category' });
+    }
+    const { data, error } = await supabase.from('blog_categories').select('*').eq('id', id).single();
+    if (error) throw error;
+    res.status(201).json({ success: true, data });
+  } catch (error) {
+    logger.error('Error in POST /blog-categories:', error);
+    const err = error as any;
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to create category',
+      code: err?.code,
+      details: err?.details,
+      hint: err?.hint,
+    });
+  }
 });
 
 /**

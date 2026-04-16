@@ -21,7 +21,7 @@ interface AuthState {
   // Actions
   signup: (email: string, password: string, full_name?: string) => Promise<boolean>;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
-  logout: () => Promise<void>;
+  logout: (options?: { skipServerCall?: boolean; reason?: string }) => Promise<void>;
   checkAuth: () => Promise<void>;
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
@@ -142,9 +142,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     }
   },
 
-  logout: async () => {
+  logout: async (options?: { skipServerCall?: boolean; reason?: string }) => {
+    const skipServerCall = options?.skipServerCall === true;
     try {
-      await authApi.logout();
+      if (!skipServerCall) {
+        await authApi.logout();
+      }
     } catch (error) {
       // Ignore logout errors
     } finally {
@@ -240,7 +243,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
               } else if (response.status === 401) {
                 // Only logout on 401, not other errors
                 console.log('[Auth Store] Background checkAuth returned 401 - logging out');
-                get().logout();
+                get().logout({ skipServerCall: true, reason: 'background-401' });
               }
               // For other errors, just ignore and keep cached user
             }).catch((error: any) => {
@@ -248,7 +251,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
               const is401 = error?.response?.status === 401 || error?.status === 401;
               if (is401) {
                 console.log('[Auth Store] Background checkAuth got 401 error - logging out');
-                get().logout();
+                get().logout({ skipServerCall: true, reason: 'background-401' });
               }
               // Ignore other errors, keep cached user
             });
@@ -285,7 +288,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         // Only logout if we get a 401 (Unauthorized) - not for other errors
         if (response.status === 401) {
           console.log('[Auth Store] 401 Unauthorized in checkAuth - logging out');
-          get().logout();
+          get().logout({ skipServerCall: true, reason: 'checkauth-401' });
         } else {
           // For other errors, keep using cached data if available
           console.warn('[Auth Store] checkAuth failed but not 401, keeping cached data:', response);
@@ -312,7 +315,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       
       if (is401) {
         console.log('[Auth Store] 401 error in checkAuth - logging out');
-        get().logout();
+        get().logout({ skipServerCall: true, reason: 'checkauth-401' });
         return;
       }
       
@@ -407,9 +410,3 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ token, isAuthenticated: !!token });
   },
 }));
-
-// Initialize on mount
-if (typeof window !== 'undefined') {
-  // Initialize immediately
-  useAuthStore.getState().initialize();
-}

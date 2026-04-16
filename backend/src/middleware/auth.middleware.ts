@@ -25,6 +25,19 @@ function getSupabaseAnon() {
   return createClient(url, anonKey);
 }
 
+function isTransientAuthError(error: any): boolean {
+  if (!error) return false;
+  const message = String(error?.message || '').toLowerCase();
+  const status = Number(error?.status || 0);
+  return (
+    status >= 500 ||
+    message.includes('fetch failed') ||
+    message.includes('network') ||
+    message.includes('timeout') ||
+    message.includes('temporarily unavailable')
+  );
+}
+
 export const authenticate = async (
   req: AuthRequest,
   res: Response,
@@ -36,7 +49,8 @@ export const authenticate = async (
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ 
         error: 'Unauthorized', 
-        message: 'No token provided' 
+        message: 'No token provided',
+        code: 'token_missing',
       });
     }
 
@@ -46,10 +60,39 @@ export const authenticate = async (
     const supabaseAnon = getSupabaseAnon();
     const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
 
-    if (error || !user) {
-      return res.status(401).json({ 
-        error: 'Unauthorized', 
-        message: 'Invalid or expired token' 
+    if (error) {
+      if (isTransientAuthError(error)) {
+        logger.warn('Authentication upstream unavailable', {
+          reason: error?.message,
+          status: error?.status,
+          code: 'upstream_auth_unavailable',
+          path: req.path,
+        });
+        return res.status(503).json({
+          error: 'Authentication temporarily unavailable',
+          message: 'Please retry shortly',
+          code: 'upstream_auth_unavailable',
+        });
+      }
+
+      logger.warn('Authentication token validation failed', {
+        reason: error?.message,
+        status: error?.status,
+        code: 'token_invalid_or_expired',
+        path: req.path,
+      });
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid or expired token',
+        code: 'token_invalid_or_expired',
+      });
+    }
+
+    if (!user) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid or expired token',
+        code: 'token_invalid_or_expired',
       });
     }
 
@@ -62,9 +105,10 @@ export const authenticate = async (
 
     if (profileError || !profile) {
       logger.error('Profile fetch error:', profileError);
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'Unauthorized', 
-        message: 'User profile not found' 
+        message: 'User profile not found',
+        code: 'profile_missing',
       });
     }
 
