@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { PageHeader } from "../components/PageHeader";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -9,10 +8,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs"
 import { Badge } from "../components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { authApi, usersApi } from "../../lib/api";
+import { authApi, crmApi, usersApi } from "../../lib/api";
 import { useAuthStore } from "../../store/auth.store";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2, XCircle, Clock, Plus, Edit, Trash2, UserPlus } from "lucide-react";
+import { CompanySetupPanel } from "./settings/CompanySetupPanel";
 
 interface PendingUser {
   id: string;
@@ -35,6 +35,9 @@ interface User {
   last_login_at?: string;
 }
 
+type PaymentProvider = "cashfree" | "razorpay";
+type EmailProvider = "mailjet" | "mailersend";
+
 export function Settings() {
   const { user } = useAuthStore();
   const isAdmin = user?.role === "admin";
@@ -45,9 +48,40 @@ export function Settings() {
   const [approving, setApproving] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("users");
   
   // Create user dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [selectedPaymentProvider, setSelectedPaymentProvider] = useState<PaymentProvider | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedEmailProvider, setSelectedEmailProvider] = useState<EmailProvider | null>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [cashfreeConfig, setCashfreeConfig] = useState({
+    appId: "",
+    secretKey: "",
+    webhookSecret: "",
+    environment: "sandbox",
+  });
+  const [razorpayConfig, setRazorpayConfig] = useState({
+    keyId: "",
+    keySecret: "",
+    webhookSecret: "",
+    accountNumber: "",
+    environment: "test",
+  });
+  const [mailjetConfig, setMailjetConfig] = useState({
+    apiKey: "",
+    secretKey: "",
+    fromEmail: "",
+    fromName: "",
+  });
+  const [mailersendConfig, setMailersendConfig] = useState({
+    apiKey: "",
+    fromEmail: "",
+    fromName: "",
+  });
+  const [activePaymentProvider, setActivePaymentProvider] = useState("");
+  const [activeEmailProvider, setActiveEmailProvider] = useState("");
   const [createForm, setCreateForm] = useState({
     email: "",
     password: "",
@@ -60,8 +94,53 @@ export function Settings() {
     if (isAdmin) {
       loadPendingUsers();
       loadAllUsers();
+      void loadPaymentConfig();
     }
   }, [isAdmin]);
+
+  const loadPaymentConfig = async () => {
+    try {
+      const response = await crmApi.getPaymentConfig();
+      if (!response.success || !response.data) return;
+      const paymentConfig = response.data;
+      if (paymentConfig.cashfree) {
+        setCashfreeConfig({
+          appId: paymentConfig.cashfree.appId || "",
+          secretKey: paymentConfig.cashfree.secretKey || "",
+          webhookSecret: paymentConfig.cashfree.webhookSecret || "",
+          environment: paymentConfig.cashfree.environment || "sandbox",
+        });
+      }
+      if (paymentConfig.razorpay) {
+        setRazorpayConfig({
+          keyId: paymentConfig.razorpay.keyId || "",
+          keySecret: paymentConfig.razorpay.keySecret || "",
+          webhookSecret: paymentConfig.razorpay.webhookSecret || "",
+          accountNumber: paymentConfig.razorpay.accountNumber || "",
+          environment: paymentConfig.razorpay.environment || "test",
+        });
+      }
+      if (paymentConfig.mailjet) {
+        setMailjetConfig({
+          apiKey: paymentConfig.mailjet.apiKey || "",
+          secretKey: paymentConfig.mailjet.secretKey || "",
+          fromEmail: paymentConfig.mailjet.fromEmail || "",
+          fromName: paymentConfig.mailjet.fromName || "",
+        });
+      }
+      if (paymentConfig.mailersend) {
+        setMailersendConfig({
+          apiKey: paymentConfig.mailersend.apiKey || "",
+          fromEmail: paymentConfig.mailersend.fromEmail || "",
+          fromName: paymentConfig.mailersend.fromName || "",
+        });
+      }
+      setActivePaymentProvider((paymentConfig.activeProviders?.payment || "").toLowerCase());
+      setActiveEmailProvider((paymentConfig.activeProviders?.email || "").toLowerCase());
+    } catch {
+      // keep form defaults if fetch fails
+    }
+  };
 
   const loadPendingUsers = async () => {
     setLoading(true);
@@ -197,6 +276,84 @@ export function Settings() {
     }
   };
 
+  const openPaymentProviderForm = (provider: PaymentProvider) => {
+    setSelectedPaymentProvider(provider);
+    setPaymentDialogOpen(true);
+  };
+
+  const handleSavePaymentConfig = async () => {
+    if (!selectedPaymentProvider) return;
+    if (selectedPaymentProvider === "cashfree") {
+      if (!cashfreeConfig.appId || !cashfreeConfig.secretKey || !cashfreeConfig.webhookSecret) {
+        toast.error("Please fill all required Cashfree fields");
+        return;
+      }
+      const response = await crmApi.savePaymentConfig("cashfree", {
+        cashfree: cashfreeConfig,
+      });
+      if (!response.success) {
+        toast.error(response.error || "Failed to save Cashfree configuration");
+        return;
+      }
+      toast.success("Cashfree configuration saved to backend");
+      setActivePaymentProvider("cashfree");
+      setPaymentDialogOpen(false);
+      return;
+    }
+    if (!razorpayConfig.keyId || !razorpayConfig.keySecret || !razorpayConfig.webhookSecret || !razorpayConfig.accountNumber) {
+      toast.error("Please fill all required Razorpay fields");
+      return;
+    }
+    const response = await crmApi.savePaymentConfig("razorpay", {
+      razorpay: razorpayConfig,
+    });
+    if (!response.success) {
+      toast.error(response.error || "Failed to save Razorpay configuration");
+      return;
+    }
+    toast.success("Razorpay configuration saved to backend");
+    setActivePaymentProvider("razorpay");
+    setPaymentDialogOpen(false);
+  };
+
+  const openEmailProviderForm = (provider: EmailProvider) => {
+    setSelectedEmailProvider(provider);
+    setEmailDialogOpen(true);
+  };
+
+  const handleSaveEmailConfig = async () => {
+    if (!selectedEmailProvider) return;
+
+    if (selectedEmailProvider === "mailjet") {
+      if (!mailjetConfig.apiKey || !mailjetConfig.secretKey || !mailjetConfig.fromEmail || !mailjetConfig.fromName) {
+        toast.error("Please fill all required Mailjet fields");
+        return;
+      }
+      const response = await crmApi.savePaymentConfig("mailjet", { mailjet: mailjetConfig });
+      if (!response.success) {
+        toast.error(response.error || "Failed to save Mailjet configuration");
+        return;
+      }
+      toast.success("Mailjet configuration saved to backend");
+      setActiveEmailProvider("mailjet");
+      setEmailDialogOpen(false);
+      return;
+    }
+
+    if (!mailersendConfig.apiKey || !mailersendConfig.fromEmail || !mailersendConfig.fromName) {
+      toast.error("Please fill all required MailerSend fields");
+      return;
+    }
+    const response = await crmApi.savePaymentConfig("mailersend", { mailersend: mailersendConfig });
+    if (!response.success) {
+      toast.error(response.error || "Failed to save MailerSend configuration");
+      return;
+    }
+    toast.success("MailerSend configuration saved to backend");
+    setActiveEmailProvider("mailersend");
+    setEmailDialogOpen(false);
+  };
+
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case "admin":
@@ -214,18 +371,13 @@ export function Settings() {
 
   return (
     <div className="min-h-screen bg-soft-white dark:bg-background">
-      <PageHeader
-        title="Settings"
-        description="Manage your account and preferences"
-      />
-
       <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="w-full space-y-6 lg:space-y-8">
-          <Tabs defaultValue="users" className="w-full max-w-4xl mx-auto">
-            <TabsList className="rounded-xl">
-              <TabsTrigger value="users" className="rounded-lg">Users & Roles</TabsTrigger>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="rounded-xl w-full justify-start flex-nowrap overflow-x-auto whitespace-nowrap">
+              <TabsTrigger value="users" className="rounded-lg data-[state=active]:!bg-black data-[state=active]:!text-white data-[state=active]:border-transparent">Users & Roles</TabsTrigger>
               {isAdmin && (
-                <TabsTrigger value="pending" className="rounded-lg">
+                <TabsTrigger value="pending" className="rounded-lg data-[state=active]:!bg-black data-[state=active]:!text-white data-[state=active]:border-transparent">
                   Pending Approvals
                   {pendingUsers.length > 0 && (
                     <Badge variant="destructive" className="ml-2">
@@ -234,9 +386,9 @@ export function Settings() {
                   )}
                 </TabsTrigger>
               )}
-              <TabsTrigger value="company" className="rounded-lg">Company</TabsTrigger>
-              <TabsTrigger value="integrations" className="rounded-lg">Integrations</TabsTrigger>
-              <TabsTrigger value="preferences" className="rounded-lg">Preferences</TabsTrigger>
+              <TabsTrigger value="company" className="rounded-lg data-[state=active]:!bg-black data-[state=active]:!text-white data-[state=active]:border-transparent">Company</TabsTrigger>
+              <TabsTrigger value="integrations" className="rounded-lg data-[state=active]:!bg-black data-[state=active]:!text-white data-[state=active]:border-transparent">Integrations</TabsTrigger>
+              <TabsTrigger value="preferences" className="rounded-lg data-[state=active]:!bg-black data-[state=active]:!text-white data-[state=active]:border-transparent">Preferences</TabsTrigger>
             </TabsList>
 
             <TabsContent value="users" className="mt-6">
@@ -594,55 +746,388 @@ export function Settings() {
             )}
 
             <TabsContent value="company" className="mt-6">
-              <div className="bg-card border border-border rounded-2xl p-5 lg:p-6 shadow-sm hover:shadow-md transition-shadow">
-                <h3 className="font-medium text-lg mb-6">Company Information</h3>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="company-name">Company Name</Label>
-                    <Input id="company-name" placeholder="Acme Corporation" className="rounded-xl" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" placeholder="info@company.com" className="rounded-xl" />
-                    </div>
-                    <div>
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input id="phone" placeholder="+1 234 567 8900" className="rounded-xl" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="address">Address</Label>
-                    <Input id="address" placeholder="123 Business St, City, Country" className="rounded-xl" />
-                  </div>
-                  <Button className="rounded-xl">Save Changes</Button>
-                </div>
-              </div>
+              <CompanySetupPanel />
             </TabsContent>
 
             <TabsContent value="integrations" className="mt-6">
               <div className="bg-card border border-border rounded-2xl p-5 lg:p-6 shadow-sm hover:shadow-md transition-shadow">
                 <h3 className="font-medium text-lg mb-6">API Integrations</h3>
-                <div className="space-y-3">
-                  {[
-                    { name: "Stripe", status: true },
-                    { name: "Google Workspace", status: true },
-                    { name: "Slack", status: false },
-                    { name: "Mailchimp", status: false }
-                  ].map((integration, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-4 border rounded-xl hover:bg-muted/30 transition-colors">
-                      <div>
-                        <p className="font-medium text-sm">{integration.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {integration.status ? "Connected" : "Not connected"}
-                        </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
+                  <div
+                    className="relative h-[230px] w-[280px] cursor-pointer [perspective:1000px] justify-self-start"
+                  >
+                    <div className="absolute bottom-0 h-[200px] w-[280px] rounded-[22px_22px_60px_60px] bg-black z-[5] shadow-[inset_0_25px_35px_rgba(255,255,255,0.05),inset_0_5px_15px_rgba(0,0,0,0.8)]" />
+
+                    <button
+                      onClick={() => openPaymentProviderForm("cashfree")}
+                      className={`group absolute left-[10px] h-[140px] w-[260px] rounded-2xl bg-[#00b894] p-4 text-left text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_-4px_15px_rgba(0,0,0,0.1)] transition-transform duration-500 hover:z-[100] hover:scale-105 hover:!translate-y-[-52px] ${
+                        activePaymentProvider === "cashfree"
+                          ? "bottom-[40px] z-[25]"
+                          : activePaymentProvider
+                          ? "bottom-[82px] z-[10]"
+                          : "bottom-[82px] z-[10]"
+                      }`}
+                    >
+                      <div className="flex h-full flex-col justify-between">
+                        <div className="flex items-center justify-between text-sm uppercase tracking-wide">
+                          <span>Cashfree</span>
+                          <div className="flex items-center gap-2">
+                            {activePaymentProvider === "cashfree" ? (
+                              <span className="rounded-full bg-[#1EC57A] px-2 py-0.5 text-[10px] font-semibold text-black normal-case">
+                                Active
+                              </span>
+                            ) : null}
+                            <div className="h-6 w-8 rounded border border-white/30 bg-white/20" />
+                          </div>
+                        </div>
+                        <div className="flex items-end justify-between">
+                          <div>
+                            <span className="block text-[10px] uppercase opacity-70">Gateway</span>
+                            <span className="text-xs font-medium">Business Account</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="block text-sm tracking-[2px] group-hover:hidden">**** 1192</span>
+                            <span className="hidden font-mono text-sm tracking-wide group-hover:block">CF PG LIVE</span>
+                          </div>
+                        </div>
                       </div>
-                      <Switch checked={integration.status} />
+                    </button>
+
+                    <button
+                      onClick={() => openPaymentProviderForm("razorpay")}
+                      className={`group absolute left-[10px] h-[140px] w-[260px] rounded-2xl bg-[#2b6de0] p-4 text-left text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_-4px_15px_rgba(0,0,0,0.1)] transition-transform duration-500 hover:z-[100] hover:scale-105 hover:!translate-y-[-52px] ${
+                        activePaymentProvider === "razorpay"
+                          ? "bottom-[40px] z-[25]"
+                          : activePaymentProvider
+                          ? "bottom-[82px] z-[10]"
+                          : "bottom-[40px] z-[20]"
+                      }`}
+                    >
+                      <div className="flex h-full flex-col justify-between">
+                        <div className="flex items-center justify-between text-sm uppercase tracking-wide">
+                          <span>Razorpay</span>
+                          <div className="flex items-center gap-2">
+                            {activePaymentProvider === "razorpay" ? (
+                              <span className="rounded-full bg-[#1EC57A] px-2 py-0.5 text-[10px] font-semibold text-black normal-case">
+                                Active
+                              </span>
+                            ) : null}
+                            <div className="h-6 w-8 rounded border border-white/30 bg-white/20" />
+                          </div>
+                        </div>
+                        <div className="flex items-end justify-between">
+                          <div>
+                            <span className="block text-[10px] uppercase opacity-70">Gateway</span>
+                            <span className="text-xs font-medium">Business Account</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="block text-sm tracking-[2px] group-hover:hidden">**** 7648</span>
+                            <span className="hidden font-mono text-sm tracking-wide group-hover:block">RP KEY LIVE</span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+
+                    <div className="absolute bottom-0 z-[30] h-[160px] w-[280px]">
+                      <svg className="h-full w-full" viewBox="0 0 280 160" fill="none">
+                        <path
+                          d="M 0 20 C 0 10, 5 10, 10 10 C 20 10, 25 25, 40 25 L 240 25 C 255 25, 260 10, 270 10 C 275 10, 280 10, 280 20 L 280 120 C 280 155, 260 160, 240 160 L 40 160 C 20 160, 0 155, 0 120 Z"
+                          fill="#000000"
+                        />
+                        <path
+                          d="M 8 22 C 8 16, 12 16, 15 16 C 23 16, 27 29, 40 29 L 240 29 C 253 29, 257 16, 265 16 C 268 16, 272 16, 272 22 L 272 120 C 272 150, 255 152, 240 152 L 40 152 C 25 152, 8 152, 8 120 Z"
+                          stroke="#2d2d2d"
+                          strokeWidth="1.5"
+                          strokeDasharray="6 4"
+                        />
+                      </svg>
+                      <div className="pointer-events-none absolute inset-x-0 top-11 text-center">
+                        <p className="text-[22px] font-semibold text-[#1EC57A]">Payment Integration</p>
+                        <p className="mt-1 text-xs font-medium text-[#698263]">Click a card to configure</p>
+                      </div>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="relative h-[230px] w-[280px] cursor-pointer [perspective:1000px] justify-self-start">
+                    <div className="absolute bottom-0 h-[200px] w-[280px] rounded-[22px_22px_60px_60px] bg-black z-[5] shadow-[inset_0_25px_35px_rgba(255,255,255,0.05),inset_0_5px_15px_rgba(0,0,0,0.8)]" />
+
+                    <button
+                      onClick={() => openEmailProviderForm("mailjet")}
+                      className={`group absolute left-[10px] h-[140px] w-[260px] rounded-2xl bg-[#f27121] p-4 text-left text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_-4px_15px_rgba(0,0,0,0.1)] transition-transform duration-500 hover:z-[100] hover:scale-105 hover:!translate-y-[-52px] ${
+                        activeEmailProvider === "mailjet"
+                          ? "bottom-[40px] z-[25]"
+                          : activeEmailProvider
+                          ? "bottom-[82px] z-[10]"
+                          : "bottom-[82px] z-[10]"
+                      }`}
+                    >
+                      <div className="flex h-full flex-col justify-between">
+                        <div className="flex items-center justify-between text-sm uppercase tracking-wide">
+                          <span>Mailjet</span>
+                          <div className="flex items-center gap-2">
+                            {activeEmailProvider === "mailjet" ? (
+                              <span className="rounded-full bg-[#1EC57A] px-2 py-0.5 text-[10px] font-semibold text-black normal-case">
+                                Active
+                              </span>
+                            ) : null}
+                            <div className="h-6 w-8 rounded border border-white/30 bg-white/20" />
+                          </div>
+                        </div>
+                        <div className="flex items-end justify-between">
+                          <div>
+                            <span className="block text-[10px] uppercase opacity-70">Email</span>
+                            <span className="text-xs font-medium">Transactional</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="block text-sm tracking-[2px] group-hover:hidden">**** MJ</span>
+                            <span className="hidden font-mono text-sm tracking-wide group-hover:block">SMTP / API</span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => openEmailProviderForm("mailersend")}
+                      className={`group absolute left-[10px] h-[140px] w-[260px] rounded-2xl bg-[#4f46e5] p-4 text-left text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_-4px_15px_rgba(0,0,0,0.1)] transition-transform duration-500 hover:z-[100] hover:scale-105 hover:!translate-y-[-52px] ${
+                        activeEmailProvider === "mailersend"
+                          ? "bottom-[40px] z-[25]"
+                          : activeEmailProvider
+                          ? "bottom-[82px] z-[10]"
+                          : "bottom-[40px] z-[20]"
+                      }`}
+                    >
+                      <div className="flex h-full flex-col justify-between">
+                        <div className="flex items-center justify-between text-sm uppercase tracking-wide">
+                          <span>MailerSend</span>
+                          <div className="flex items-center gap-2">
+                            {activeEmailProvider === "mailersend" ? (
+                              <span className="rounded-full bg-[#1EC57A] px-2 py-0.5 text-[10px] font-semibold text-black normal-case">
+                                Active
+                              </span>
+                            ) : null}
+                            <div className="h-6 w-8 rounded border border-white/30 bg-white/20" />
+                          </div>
+                        </div>
+                        <div className="flex items-end justify-between">
+                          <div>
+                            <span className="block text-[10px] uppercase opacity-70">Email</span>
+                            <span className="text-xs font-medium">Transactional</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="block text-sm tracking-[2px] group-hover:hidden">**** MS</span>
+                            <span className="hidden font-mono text-sm tracking-wide group-hover:block">API ONLY</span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+
+                    <div className="absolute bottom-0 z-[30] h-[160px] w-[280px]">
+                      <svg className="h-full w-full" viewBox="0 0 280 160" fill="none">
+                        <path d="M 0 20 C 0 10, 5 10, 10 10 C 20 10, 25 25, 40 25 L 240 25 C 255 25, 260 10, 270 10 C 275 10, 280 10, 280 20 L 280 120 C 280 155, 260 160, 240 160 L 40 160 C 20 160, 0 155, 0 120 Z" fill="#000000" />
+                        <path d="M 8 22 C 8 16, 12 16, 15 16 C 23 16, 27 29, 40 29 L 240 29 C 253 29, 257 16, 265 16 C 268 16, 272 16, 272 22 L 272 120 C 272 150, 255 152, 240 152 L 40 152 C 25 152, 8 152, 8 120 Z" stroke="#2d2d2d" strokeWidth="1.5" strokeDasharray="6 4" />
+                      </svg>
+                      <div className="pointer-events-none absolute inset-x-0 top-11 text-center">
+                        <p className="text-[22px] font-semibold text-[#1EC57A]">Email Integration</p>
+                        <p className="mt-1 text-xs font-medium text-[#698263]">Click a card to configure</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-[230px] w-[280px] rounded-2xl border border-dashed border-[#d9d9d9] bg-muted/20 p-5 justify-self-start">
+                    <h4 className="text-base font-medium">More Integrations</h4>
+                    <p className="mt-2 text-sm text-muted-foreground">This column is reserved for the next integration category.</p>
+                  </div>
                 </div>
               </div>
             </TabsContent>
+
+            <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+              <DialogContent className="rounded-2xl sm:max-w-[560px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedPaymentProvider === "cashfree" ? "Configure Cashfree" : "Configure Razorpay"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Fill required credentials to connect the payment gateway.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {selectedPaymentProvider === "cashfree" ? (
+                  <div className="grid grid-cols-1 gap-4 py-2">
+                    <div>
+                      <Label htmlFor="cashfree-app-id">App ID *</Label>
+                      <Input
+                        id="cashfree-app-id"
+                        className="rounded-xl"
+                        value={cashfreeConfig.appId}
+                        onChange={(e) => setCashfreeConfig((prev) => ({ ...prev, appId: e.target.value }))}
+                        placeholder="Enter Cashfree App ID"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cashfree-secret-key">Secret Key *</Label>
+                      <Input
+                        id="cashfree-secret-key"
+                        className="rounded-xl"
+                        value={cashfreeConfig.secretKey}
+                        onChange={(e) => setCashfreeConfig((prev) => ({ ...prev, secretKey: e.target.value }))}
+                        placeholder="Enter Cashfree Secret Key"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cashfree-webhook-secret">Webhook Secret *</Label>
+                      <Input
+                        id="cashfree-webhook-secret"
+                        className="rounded-xl"
+                        value={cashfreeConfig.webhookSecret}
+                        onChange={(e) => setCashfreeConfig((prev) => ({ ...prev, webhookSecret: e.target.value }))}
+                        placeholder="Enter Cashfree Webhook Secret"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cashfree-env">Environment *</Label>
+                      <Select
+                        value={cashfreeConfig.environment}
+                        onValueChange={(value) => setCashfreeConfig((prev) => ({ ...prev, environment: value }))}
+                      >
+                        <SelectTrigger id="cashfree-env" className="rounded-xl">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sandbox">Sandbox</SelectItem>
+                          <SelectItem value="production">Production</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 py-2">
+                    <div>
+                      <Label htmlFor="razorpay-key-id">Key ID *</Label>
+                      <Input
+                        id="razorpay-key-id"
+                        className="rounded-xl"
+                        value={razorpayConfig.keyId}
+                        onChange={(e) => setRazorpayConfig((prev) => ({ ...prev, keyId: e.target.value }))}
+                        placeholder="Enter Razorpay Key ID"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="razorpay-key-secret">Key Secret *</Label>
+                      <Input
+                        id="razorpay-key-secret"
+                        className="rounded-xl"
+                        value={razorpayConfig.keySecret}
+                        onChange={(e) => setRazorpayConfig((prev) => ({ ...prev, keySecret: e.target.value }))}
+                        placeholder="Enter Razorpay Key Secret"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="razorpay-webhook-secret">Webhook Secret *</Label>
+                      <Input
+                        id="razorpay-webhook-secret"
+                        className="rounded-xl"
+                        value={razorpayConfig.webhookSecret}
+                        onChange={(e) => setRazorpayConfig((prev) => ({ ...prev, webhookSecret: e.target.value }))}
+                        placeholder="Enter Razorpay Webhook Secret"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="razorpay-account-number">Account Number *</Label>
+                      <Input
+                        id="razorpay-account-number"
+                        className="rounded-xl"
+                        value={razorpayConfig.accountNumber}
+                        onChange={(e) => setRazorpayConfig((prev) => ({ ...prev, accountNumber: e.target.value }))}
+                        placeholder="Enter Razorpay Account Number"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="razorpay-env">Environment *</Label>
+                      <Select
+                        value={razorpayConfig.environment}
+                        onValueChange={(value) => setRazorpayConfig((prev) => ({ ...prev, environment: value }))}
+                      >
+                        <SelectTrigger id="razorpay-env" className="rounded-xl">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="test">Test</SelectItem>
+                          <SelectItem value="live">Live</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button variant="outline" className="rounded-xl" onClick={() => setPaymentDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button className="rounded-xl" onClick={handleSavePaymentConfig}>
+                    Save Configuration
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+              <DialogContent className="rounded-2xl sm:max-w-[560px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedEmailProvider === "mailjet" ? "Configure Mailjet" : "Configure MailerSend"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Fill required credentials to connect the email provider.
+                  </DialogDescription>
+                </DialogHeader>
+
+                {selectedEmailProvider === "mailjet" ? (
+                  <div className="grid grid-cols-1 gap-4 py-2">
+                    <div>
+                      <Label htmlFor="mailjet-api-key">API Key *</Label>
+                      <Input id="mailjet-api-key" className="rounded-xl" value={mailjetConfig.apiKey} onChange={(e) => setMailjetConfig((prev) => ({ ...prev, apiKey: e.target.value }))} placeholder="Enter Mailjet API Key" />
+                    </div>
+                    <div>
+                      <Label htmlFor="mailjet-secret-key">Secret Key *</Label>
+                      <Input id="mailjet-secret-key" className="rounded-xl" value={mailjetConfig.secretKey} onChange={(e) => setMailjetConfig((prev) => ({ ...prev, secretKey: e.target.value }))} placeholder="Enter Mailjet Secret Key" />
+                    </div>
+                    <div>
+                      <Label htmlFor="mailjet-from-email">From Email *</Label>
+                      <Input id="mailjet-from-email" className="rounded-xl" value={mailjetConfig.fromEmail} onChange={(e) => setMailjetConfig((prev) => ({ ...prev, fromEmail: e.target.value }))} placeholder="noreply@yourdomain.com" />
+                    </div>
+                    <div>
+                      <Label htmlFor="mailjet-from-name">From Name *</Label>
+                      <Input id="mailjet-from-name" className="rounded-xl" value={mailjetConfig.fromName} onChange={(e) => setMailjetConfig((prev) => ({ ...prev, fromName: e.target.value }))} placeholder="BlackMatter CRM" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 py-2">
+                    <div>
+                      <Label htmlFor="mailersend-api-key">API Key *</Label>
+                      <Input id="mailersend-api-key" className="rounded-xl" value={mailersendConfig.apiKey} onChange={(e) => setMailersendConfig((prev) => ({ ...prev, apiKey: e.target.value }))} placeholder="Enter MailerSend API Key" />
+                    </div>
+                    <div>
+                      <Label htmlFor="mailersend-from-email">From Email *</Label>
+                      <Input id="mailersend-from-email" className="rounded-xl" value={mailersendConfig.fromEmail} onChange={(e) => setMailersendConfig((prev) => ({ ...prev, fromEmail: e.target.value }))} placeholder="noreply@yourdomain.com" />
+                    </div>
+                    <div>
+                      <Label htmlFor="mailersend-from-name">From Name *</Label>
+                      <Input id="mailersend-from-name" className="rounded-xl" value={mailersendConfig.fromName} onChange={(e) => setMailersendConfig((prev) => ({ ...prev, fromName: e.target.value }))} placeholder="BlackMatter CRM" />
+                    </div>
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button variant="outline" className="rounded-xl" onClick={() => setEmailDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button className="rounded-xl" onClick={handleSaveEmailConfig}>
+                    Save Configuration
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <TabsContent value="preferences" className="mt-6">
               <div className="bg-card border border-border rounded-2xl p-5 lg:p-6 shadow-sm hover:shadow-md transition-shadow">

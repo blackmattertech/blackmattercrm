@@ -597,6 +597,11 @@ export const crmApi = {
   publishBlog: (id: string) => api.put<any>(`/crm/blogs/${id}/publish`),
   getBlogCategories: () => api.get<any[]>('/crm/blog-categories'),
   createBlogCategory: (name: string) => api.post<any>('/crm/blog-categories', { name }),
+  getCompanySetup: () => api.get<any>('/crm/company-setup'),
+  saveCompanySetup: (data: any) => api.put<any>('/crm/company-setup', data),
+  getPaymentConfig: () => api.get<any>('/crm/integrations/payment-config'),
+  savePaymentConfig: (provider: "cashfree" | "razorpay" | "mailjet" | "mailersend", payload: any) =>
+    api.put<any>('/crm/integrations/payment-config', { provider, ...payload }),
 };
 
 // Dashboard API
@@ -644,4 +649,29 @@ export const accountsApi = {
   getInvoices: () => api.get<any[]>('/accounts/invoices'),
   getPayments: () => api.get<any[]>('/accounts/payments'),
   getTrialBalance: () => api.get<any[]>('/accounts/trial-balance'),
+};
+
+export const marketingApi = {
+  getEmailDashboard: () => api.get<any>('/marketing/email-dashboard'),
+  getCampaigns: (params?: any) => {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return api.get<any>(`/marketing/campaigns${queryString}`);
+  },
+  createCampaign: (data: any) => api.post<any>('/marketing/campaigns', data),
+  sendCampaign: (id: string) => api.post<any>(`/marketing/campaigns/${id}/send`),
+  getContacts: (params?: any) => {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return api.get<any>(`/marketing/contacts${queryString}`);
+  },
+  createContact: (data: any) => api.post<any>('/marketing/contacts', data),
+  getContactLists: (params?: any) => {
+    const queryString = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return api.get<any>(`/marketing/contact-lists${queryString}`);
+  },
+  createContactList: (name: string) => api.post<any>('/marketing/contact-lists', { name }),
+  uploadCampaignAsset: async (file: File) => {
+    const formData = new FormData();
+    formData.append('asset', file);
+    return api.uploadFormData<any>('/marketing/campaign-assets', formData);
+  },
 };
