@@ -1293,11 +1293,11 @@ export function Accounts() {
 
           <Tabs value={selectedTab} onValueChange={setSelectedTab}>
             <TabsList className="rounded-xl">
-              <TabsTrigger value="invoices" className="rounded-lg data-[state=active]:!bg-logo-primary data-[state=active]:!text-white data-[state=active]:border-transparent">Invoices</TabsTrigger>
-              <TabsTrigger value="receipts" className="rounded-lg data-[state=active]:!bg-logo-primary data-[state=active]:!text-white data-[state=active]:border-transparent">Receipts</TabsTrigger>
-              <TabsTrigger value="payments" className="rounded-lg data-[state=active]:!bg-logo-primary data-[state=active]:!text-white data-[state=active]:border-transparent">Payments</TabsTrigger>
-              <TabsTrigger value="expenses" className="rounded-lg data-[state=active]:!bg-logo-primary data-[state=active]:!text-white data-[state=active]:border-transparent">Expenses</TabsTrigger>
-              <TabsTrigger value="reports" className="rounded-lg data-[state=active]:!bg-logo-primary data-[state=active]:!text-white data-[state=active]:border-transparent">Reports</TabsTrigger>
+              <TabsTrigger value="invoices" className="rounded-lg data-[state=active]:!bg-black data-[state=active]:!text-white data-[state=active]:border-transparent">Invoices</TabsTrigger>
+              <TabsTrigger value="receipts" className="rounded-lg data-[state=active]:!bg-black data-[state=active]:!text-white data-[state=active]:border-transparent">Receipts</TabsTrigger>
+              <TabsTrigger value="payments" className="rounded-lg data-[state=active]:!bg-black data-[state=active]:!text-white data-[state=active]:border-transparent">Payments</TabsTrigger>
+              <TabsTrigger value="expenses" className="rounded-lg data-[state=active]:!bg-black data-[state=active]:!text-white data-[state=active]:border-transparent">Expenses</TabsTrigger>
+              <TabsTrigger value="reports" className="rounded-lg data-[state=active]:!bg-black data-[state=active]:!text-white data-[state=active]:border-transparent">Reports</TabsTrigger>
             </TabsList>
 
             <TabsContent value="invoices" className="mt-6">

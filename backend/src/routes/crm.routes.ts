@@ -1,12 +1,17 @@
 import express from 'express';
 import multer from 'multer';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { CRMService, type Lead } from '../services/crm.service.js';
-import { authenticate, requireSales } from '../middleware/auth.middleware.js';
+import { authenticate, requireAdmin, requireSales } from '../middleware/auth.middleware.js';
 import { supabase } from '../index.js';
 import { logger } from '../utils/logger.js';
 import { z } from 'zod';
 
 const router = express.Router();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const envFilePath = path.resolve(__dirname, '..', '..', '..', '.env');
 
 // Configure multer for blog image uploads (memory storage)
 const blogImageUpload = multer({
@@ -180,6 +185,72 @@ const ensureBlogCategory = async (categoryName?: string | null): Promise<string 
   }
 
   return created?.id || null;
+};
+
+const normalizeCompanySetupPayload = (body: Record<string, any>, userId?: string, existingId?: string | null) => {
+  const offices = Array.isArray(body?.offices) ? body.offices : [];
+  const directors = Array.isArray(body?.directors) ? body.directors : [];
+  const documents = Array.isArray(body?.documents) ? body.documents : [];
+  const now = new Date().toISOString();
+
+  return {
+    id: existingId || undefined,
+    is_active: true,
+    company_name: body?.companyName || null,
+    cin: body?.cin || null,
+    company_type: body?.companyType || null,
+    incorporation_date: body?.incorporationDate || null,
+    financial_year_start: body?.financialYearStart || null,
+    registered_state: body?.registeredState || null,
+    company_pan: body?.companyPan || null,
+    company_tan: body?.companyTan || null,
+    gst_number: body?.gstNumber || null,
+    gst_registration_state: body?.gstRegistrationState || null,
+    msme_number: body?.msmeNumber || null,
+    iec_number: body?.iecNumber || null,
+    professional_tax_number: body?.professionalTaxNumber || null,
+    shops_establishment_number: body?.shopsEstablishmentNumber || null,
+    official_email: body?.officialEmail || null,
+    accounts_email: body?.accountsEmail || null,
+    hr_email: body?.hrEmail || null,
+    legal_email: body?.legalEmail || null,
+    website_url: body?.websiteUrl || null,
+    bank_name: body?.bankName || null,
+    account_number: body?.accountNumber || null,
+    ifsc_code: body?.ifscCode || null,
+    account_type: body?.accountType || null,
+    branch_name: body?.branchName || null,
+    branch_address: body?.branchAddress || null,
+    micr_code: body?.micrCode || null,
+    swift_code: body?.swiftCode || null,
+    directors,
+    offices,
+    documents,
+    payload: body || {},
+    created_by: userId || null,
+    updated_by: userId || null,
+    created_at: now,
+    updated_at: now,
+  };
+};
+
+const upsertEnvValue = (envText: string, key: string, value: string) => {
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const line = `${key}=${value}`;
+  const keyRegex = new RegExp(`^${escapedKey}=.*$`, 'm');
+  if (keyRegex.test(envText)) {
+    return envText.replace(keyRegex, line);
+  }
+  return envText.trimEnd() + `\n${line}\n`;
+};
+
+const readEnvText = async () => {
+  try {
+    return await fs.readFile(envFilePath, 'utf-8');
+  } catch (error: any) {
+    if (error?.code === 'ENOENT') return '';
+    throw error;
+  }
 };
 
 /**
@@ -521,6 +592,254 @@ router.post('/blog-categories', requireSales, async (req, res) => {
     res.status(500).json({
       success: false,
       error: err?.message || 'Failed to create category',
+      code: err?.code,
+      details: err?.details,
+      hint: err?.hint,
+    });
+  }
+});
+
+/**
+ * GET /api/crm/company-setup
+ * Get active company setup profile
+ */
+router.get('/company-setup', async (_req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('company_setup')
+      .select('*')
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      if (isMissingTableError(error) || isMissingColumnError(error)) {
+        return res.json({ success: true, data: null });
+      }
+      throw error;
+    }
+
+    res.json({ success: true, data: data || null });
+  } catch (error) {
+    logger.error('Error in GET /company-setup:', error);
+    const err = error as any;
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to fetch company setup',
+      code: err?.code,
+      details: err?.details,
+      hint: err?.hint,
+    });
+  }
+});
+
+/**
+ * PUT /api/crm/company-setup
+ * Save active company setup profile (single-row mode)
+ */
+router.put('/company-setup', requireSales, async (req, res) => {
+  try {
+    const body = (req.body || {}) as Record<string, any>;
+    const userId = (req as any)?.user?.id;
+
+    const { data: existing, error: existingError } = await supabase
+      .from('company_setup')
+      .select('id')
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingError) {
+      if (isMissingTableError(existingError) || isMissingColumnError(existingError)) {
+        return res.status(500).json({
+          success: false,
+          error: 'company_setup table is missing. Run company setup migrations first.',
+          code: (existingError as any)?.code,
+        });
+      }
+      throw existingError;
+    }
+
+    const normalized = normalizeCompanySetupPayload(body, userId, existing?.id || null);
+    const now = new Date().toISOString();
+
+    if (existing?.id) {
+      const updatePayload = {
+        ...normalized,
+        created_by: undefined,
+        created_at: undefined,
+        updated_at: now,
+      };
+      const { data, error } = await supabase
+        .from('company_setup')
+        .update(updatePayload)
+        .eq('id', existing.id)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      return res.json({ success: true, data });
+    }
+
+    const { data, error } = await supabase
+      .from('company_setup')
+      .insert({
+        ...normalized,
+        created_at: now,
+        updated_at: now,
+      })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return res.status(201).json({ success: true, data });
+  } catch (error) {
+    logger.error('Error in PUT /company-setup:', error);
+    const err = error as any;
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to save company setup',
+      code: err?.code,
+      details: err?.details,
+      hint: err?.hint,
+    });
+  }
+});
+
+/**
+ * GET /api/crm/integrations/payment-config
+ * Read payment integration config from runtime env
+ */
+router.get('/integrations/payment-config', requireAdmin, async (_req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        cashfree: {
+          appId: process.env.CASHFREE_APP_ID || '',
+          secretKey: process.env.CASHFREE_SECRET_KEY || '',
+          webhookSecret: process.env.CASHFREE_WEBHOOK_SECRET || '',
+          environment: process.env.CASHFREE_ENVIRONMENT || 'sandbox',
+        },
+        razorpay: {
+          keyId: process.env.RAZORPAY_KEY_ID || '',
+          keySecret: process.env.RAZORPAY_KEY_SECRET || '',
+          webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || '',
+          accountNumber: process.env.RAZORPAY_ACCOUNT_NUMBER || '',
+          environment: process.env.RAZORPAY_ENVIRONMENT || 'test',
+        },
+        mailjet: {
+          apiKey: process.env.MAILJET_API_KEY || '',
+          secretKey: process.env.MAILJET_SECRET_KEY || '',
+          fromEmail: process.env.MAILJET_FROM_EMAIL || '',
+          fromName: process.env.MAILJET_FROM_NAME || '',
+        },
+        mailersend: {
+          apiKey: process.env.MAILERSEND_API_KEY || '',
+          fromEmail: process.env.MAILERSEND_FROM_EMAIL || '',
+          fromName: process.env.MAILERSEND_FROM_NAME || '',
+        },
+        activeProviders: {
+          payment: process.env.PAYMENT_PROVIDER || '',
+          email: process.env.EMAIL_PROVIDER || '',
+        },
+      },
+    });
+  } catch (error) {
+    logger.error('Error in GET /integrations/payment-config:', error);
+    const err = error as any;
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to fetch payment config',
+      code: err?.code,
+      details: err?.details,
+      hint: err?.hint,
+    });
+  }
+});
+
+/**
+ * PUT /api/crm/integrations/payment-config
+ * Save payment integration config to .env and process.env
+ */
+router.put('/integrations/payment-config', requireAdmin, async (req, res) => {
+  try {
+    const cashfree = (req.body?.cashfree || {}) as Record<string, string>;
+    const razorpay = (req.body?.razorpay || {}) as Record<string, string>;
+    const mailjet = (req.body?.mailjet || {}) as Record<string, string>;
+    const mailersend = (req.body?.mailersend || {}) as Record<string, string>;
+    const provider = String(req.body?.provider || '').toLowerCase();
+
+    if (!provider || !['cashfree', 'razorpay', 'mailjet', 'mailersend'].includes(provider)) {
+      return res.status(400).json({ success: false, error: 'Invalid provider' });
+    }
+
+    let envText = await readEnvText();
+    const updates: Record<string, string> = {};
+
+    if (provider === 'cashfree') {
+      if (!cashfree.appId || !cashfree.secretKey || !cashfree.webhookSecret || !cashfree.environment) {
+        return res.status(400).json({ success: false, error: 'Missing required Cashfree fields' });
+      }
+      updates.PAYMENT_PROVIDER = 'cashfree';
+      updates.CASHFREE_APP_ID = cashfree.appId;
+      updates.CASHFREE_SECRET_KEY = cashfree.secretKey;
+      updates.CASHFREE_WEBHOOK_SECRET = cashfree.webhookSecret;
+      updates.CASHFREE_ENVIRONMENT = cashfree.environment;
+    }
+
+    if (provider === 'razorpay') {
+      if (!razorpay.keyId || !razorpay.keySecret || !razorpay.webhookSecret || !razorpay.accountNumber || !razorpay.environment) {
+        return res.status(400).json({ success: false, error: 'Missing required Razorpay fields' });
+      }
+      updates.PAYMENT_PROVIDER = 'razorpay';
+      updates.RAZORPAY_KEY_ID = razorpay.keyId;
+      updates.RAZORPAY_KEY_SECRET = razorpay.keySecret;
+      updates.RAZORPAY_WEBHOOK_SECRET = razorpay.webhookSecret;
+      updates.RAZORPAY_ACCOUNT_NUMBER = razorpay.accountNumber;
+      updates.RAZORPAY_ENVIRONMENT = razorpay.environment;
+    }
+
+    if (provider === 'mailjet') {
+      if (!mailjet.apiKey || !mailjet.secretKey || !mailjet.fromEmail || !mailjet.fromName) {
+        return res.status(400).json({ success: false, error: 'Missing required Mailjet fields' });
+      }
+      updates.EMAIL_PROVIDER = 'mailjet';
+      updates.MAILJET_API_KEY = mailjet.apiKey;
+      updates.MAILJET_SECRET_KEY = mailjet.secretKey;
+      updates.MAILJET_FROM_EMAIL = mailjet.fromEmail;
+      updates.MAILJET_FROM_NAME = mailjet.fromName;
+    }
+
+    if (provider === 'mailersend') {
+      if (!mailersend.apiKey || !mailersend.fromEmail || !mailersend.fromName) {
+        return res.status(400).json({ success: false, error: 'Missing required MailerSend fields' });
+      }
+      updates.EMAIL_PROVIDER = 'mailersend';
+      updates.MAILERSEND_API_KEY = mailersend.apiKey;
+      updates.MAILERSEND_FROM_EMAIL = mailersend.fromEmail;
+      updates.MAILERSEND_FROM_NAME = mailersend.fromName;
+    }
+
+    for (const [key, value] of Object.entries(updates)) {
+      envText = upsertEnvValue(envText, key, value);
+      process.env[key] = value;
+    }
+
+    await fs.writeFile(envFilePath, envText, 'utf-8');
+
+    return res.json({
+      success: true,
+      message: `${provider} configuration saved to .env`,
+    });
+  } catch (error) {
+    logger.error('Error in PUT /integrations/payment-config:', error);
+    const err = error as any;
+    res.status(500).json({
+      success: false,
+      error: err?.message || 'Failed to save payment config',
       code: err?.code,
       details: err?.details,
       hint: err?.hint,
