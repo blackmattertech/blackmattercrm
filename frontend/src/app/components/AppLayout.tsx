@@ -3,7 +3,20 @@ import { TopHeader } from "./TopHeader";
 import { MobileMenu } from "./MobileMenu";
 import { User } from "../../store/auth.store";
 
-export type NavSection = "dashboard" | "crm" | "accounts" | "products" | "marketing" | "teams" | "notifications" | "settings";
+export type NavSection =
+  | "dashboard"
+  | "crm"
+  | "accounts"
+  | "products"
+  | "marketing"
+  | "blogs"
+  | "teams"
+  | "notifications"
+  | "settings-users"
+  | "settings-pending"
+  | "settings-company"
+  | "settings-integrations"
+  | "settings-preferences";
 
 interface AppLayoutProps {
   children: ReactNode;

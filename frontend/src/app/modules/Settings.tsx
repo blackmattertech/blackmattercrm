@@ -14,6 +14,13 @@ import { useAuthStore } from "../../store/auth.store";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2, XCircle, Clock, Plus, Edit, Trash2, UserPlus } from "lucide-react";
 
+type SettingsTab = "users" | "pending" | "company" | "integrations" | "preferences";
+
+interface SettingsProps {
+  initialTab?: SettingsTab;
+  hideTabs?: boolean;
+}
+
 interface PendingUser {
   id: string;
   email: string;
@@ -35,7 +42,7 @@ interface User {
   last_login_at?: string;
 }
 
-export function Settings() {
+export function Settings({ initialTab = "company", hideTabs = false }: SettingsProps) {
   const { user } = useAuthStore();
   const isAdmin = user?.role === "admin";
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
@@ -212,6 +219,9 @@ export function Settings() {
     }
   };
 
+  const resolvedTab: SettingsTab = initialTab === "pending" && !isAdmin ? "users" : initialTab;
+  const fullBleed = hideTabs && resolvedTab === "company";
+
   return (
     <div className="min-h-screen bg-soft-white dark:bg-background">
       <PageHeader
@@ -219,25 +229,31 @@ export function Settings() {
         description="Manage your account and preferences"
       />
 
-      <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-        <div className="w-full space-y-6 lg:space-y-8">
-          <Tabs defaultValue="users" className="w-full max-w-4xl mx-auto">
-            <TabsList className="rounded-xl">
-              <TabsTrigger value="users" className="rounded-lg">Users & Roles</TabsTrigger>
-              {isAdmin && (
-                <TabsTrigger value="pending" className="rounded-lg">
-                  Pending Approvals
-                  {pendingUsers.length > 0 && (
-                    <Badge variant="destructive" className="ml-2">
-                      {pendingUsers.length}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="company" className="rounded-lg">Company</TabsTrigger>
-              <TabsTrigger value="integrations" className="rounded-lg">Integrations</TabsTrigger>
-              <TabsTrigger value="preferences" className="rounded-lg">Preferences</TabsTrigger>
-            </TabsList>
+      <div className={fullBleed ? "px-0 py-0" : "px-4 sm:px-6 lg:px-8 py-6 lg:py-8"}>
+        <div className={fullBleed ? "w-full" : "w-full space-y-6 lg:space-y-8"}>
+          <Tabs
+            value={resolvedTab}
+            defaultValue={resolvedTab}
+            className={fullBleed ? "w-full max-w-none" : "w-full max-w-4xl mx-auto"}
+          >
+            {!hideTabs && (
+              <TabsList className="rounded-xl">
+                <TabsTrigger value="users" className="rounded-lg">Users & Roles</TabsTrigger>
+                {isAdmin && (
+                  <TabsTrigger value="pending" className="rounded-lg">
+                    Pending Approvals
+                    {pendingUsers.length > 0 && (
+                      <Badge variant="destructive" className="ml-2">
+                        {pendingUsers.length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="company" className="rounded-lg">Company</TabsTrigger>
+                <TabsTrigger value="integrations" className="rounded-lg">Integrations</TabsTrigger>
+                <TabsTrigger value="preferences" className="rounded-lg">Preferences</TabsTrigger>
+              </TabsList>
+            )}
 
             <TabsContent value="users" className="mt-6">
               <div className="bg-card border border-border rounded-2xl p-5 lg:p-6 shadow-sm hover:shadow-md transition-shadow">
@@ -594,29 +610,12 @@ export function Settings() {
             )}
 
             <TabsContent value="company" className="mt-6">
-              <div className="bg-card border border-border rounded-2xl p-5 lg:p-6 shadow-sm hover:shadow-md transition-shadow">
-                <h3 className="font-medium text-lg mb-6">Company Information</h3>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="company-name">Company Name</Label>
-                    <Input id="company-name" placeholder="Acme Corporation" className="rounded-xl" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" placeholder="info@company.com" className="rounded-xl" />
-                    </div>
-                    <div>
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input id="phone" placeholder="+1 234 567 8900" className="rounded-xl" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="address">Address</Label>
-                    <Input id="address" placeholder="123 Business St, City, Country" className="rounded-xl" />
-                  </div>
-                  <Button className="rounded-xl">Save Changes</Button>
-                </div>
+              <div className={fullBleed ? "bg-card border border-border rounded-none p-0" : "bg-card border border-border rounded-2xl p-0"}>
+                <iframe
+                  title="Indian Company Profile Setup"
+                  src="/settings/company/index.html"
+                  className={fullBleed ? "w-full h-[calc(100vh-128px)] border border-border" : "w-full h-[calc(100vh-170px)] rounded-2xl border border-border"}
+                />
               </div>
             </TabsContent>
 

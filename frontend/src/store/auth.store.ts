@@ -17,6 +17,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   rememberMe: boolean;
+  cooldownUntil: number | null;
   
   // Actions
   signup: (email: string, password: string, full_name?: string) => Promise<boolean>;
@@ -49,6 +50,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   isLoading: true, // Start with loading true to prevent flash
   error: null,
   rememberMe: typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.REMEMBER_ME) === 'true' : false,
+  cooldownUntil: null,
 
   signup: async (email: string, password: string, full_name?: string) => {
     set({ isLoading: true, error: null });
@@ -68,7 +70,18 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   login: async (email: string, password: string, rememberMe: boolean = false) => {
-    set({ isLoading: true, error: null, rememberMe });
+    const now = Date.now();
+    const cooldownUntil = get().cooldownUntil;
+    if (cooldownUntil && cooldownUntil > now) {
+      set({
+        isLoading: false,
+        rememberMe,
+        error: `Too many attempts. Please try again in ${Math.ceil((cooldownUntil - now) / 1000)}s.`,
+      });
+      return false;
+    }
+
+    set({ isLoading: true, error: null, rememberMe, cooldownUntil: null });
     try {
       console.log('[Auth Store] Attempting login for:', email);
       console.log('[Auth Store] Current window location:', typeof window !== 'undefined' ? window.location.href : 'N/A');
@@ -130,8 +143,21 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         }
       } else {
         console.error('[Auth Store] Login failed:', response.error);
-        const errorMsg = response.error || 'Invalid email or password. Please check your credentials and network connection.';
-        set({ error: errorMsg, isLoading: false });
+        const rawMsg = response.error || 'Invalid email or password. Please check your credentials and network connection.';
+        const status = (response as any).status;
+
+        // If backend preserved Supabase 429, enforce short cooldown to avoid hammering auth.
+        if (status === 429 || /too many/i.test(rawMsg)) {
+          const until = Date.now() + 60_000; // 60s UI cooldown (Supabase may require longer)
+          set({
+            error: 'Too many attempts. Please wait a bit, then try again (or reset password).',
+            isLoading: false,
+            cooldownUntil: until,
+          });
+          return false;
+        }
+
+        set({ error: rawMsg, isLoading: false });
         return false;
       }
     } catch (error: any) {

@@ -4,6 +4,7 @@ import {
   DollarSign,
   Package,
   Megaphone,
+  BookOpen,
   UserSquare2,
   Bell,
   Settings,
@@ -31,14 +32,16 @@ const navItems = [
   { id: "accounts" as const, label: "Accounts", icon: DollarSign },
   { id: "products" as const, label: "Products", icon: Package },
   { id: "marketing" as const, label: "Marketing", icon: Megaphone },
+  { id: "blogs" as const, label: "Blogs", icon: BookOpen },
   { id: "teams" as const, label: "Teams", icon: UserSquare2 },
   { id: "notifications" as const, label: "Notifications", icon: Bell },
-  { id: "settings" as const, label: "Settings", icon: Settings },
 ];
 
 export function MobileMenu({ isOpen, onClose, currentSection, onNavigate, notificationCount = 0 }: MobileMenuProps) {
   const [darkMode, setDarkMode] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { user } = useAuthStore();
+  const isAdmin = user?.role === "admin";
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -49,6 +52,13 @@ export function MobileMenu({ isOpen, onClose, currentSection, onNavigate, notifi
     onNavigate(section);
     onClose();
   };
+
+  const isSettingsActive =
+    currentSection === "settings-users" ||
+    currentSection === "settings-pending" ||
+    currentSection === "settings-company" ||
+    currentSection === "settings-integrations" ||
+    currentSection === "settings-preferences";
 
   if (!isOpen) return null;
 
@@ -108,6 +118,82 @@ export function MobileMenu({ isOpen, onClose, currentSection, onNavigate, notifi
                   </button>
                 );
               })}
+
+              <button
+                onClick={() => setSettingsOpen((v) => !v)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                  isSettingsActive
+                    ? "bg-foreground text-background shadow-md"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                <Settings className="w-5 h-5 flex-shrink-0" />
+                <span className="flex-1 text-left font-medium">Settings</span>
+                <span className="text-xs opacity-70">{settingsOpen ? "Hide" : "Show"}</span>
+              </button>
+
+              {settingsOpen && (
+                <div className="ml-4 mt-1 space-y-1">
+                  <button
+                    onClick={() => handleNavigate("settings-users")}
+                    className={cn(
+                      "w-full text-left px-4 py-2 rounded-lg transition-colors",
+                      currentSection === "settings-users"
+                        ? "bg-muted text-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    )}
+                  >
+                    Users & Roles
+                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleNavigate("settings-pending")}
+                      className={cn(
+                        "w-full text-left px-4 py-2 rounded-lg transition-colors",
+                        currentSection === "settings-pending"
+                          ? "bg-muted text-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                      )}
+                    >
+                      Pending Approvals
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleNavigate("settings-company")}
+                    className={cn(
+                      "w-full text-left px-4 py-2 rounded-lg transition-colors",
+                      currentSection === "settings-company"
+                        ? "bg-muted text-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    )}
+                  >
+                    Company
+                  </button>
+                  <button
+                    onClick={() => handleNavigate("settings-integrations")}
+                    className={cn(
+                      "w-full text-left px-4 py-2 rounded-lg transition-colors",
+                      currentSection === "settings-integrations"
+                        ? "bg-muted text-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    )}
+                  >
+                    Integrations
+                  </button>
+                  <button
+                    onClick={() => handleNavigate("settings-preferences")}
+                    className={cn(
+                      "w-full text-left px-4 py-2 rounded-lg transition-colors",
+                      currentSection === "settings-preferences"
+                        ? "bg-muted text-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    )}
+                  >
+                    Preferences
+                  </button>
+                </div>
+              )}
             </div>
           </nav>
 

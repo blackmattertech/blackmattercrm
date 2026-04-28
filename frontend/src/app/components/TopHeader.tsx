@@ -5,6 +5,7 @@ import {
   DollarSign,
   Package,
   Megaphone,
+  BookOpen,
   UserSquare2,
   Bell,
   Settings,
@@ -41,13 +42,14 @@ const navItems = [
   { id: "accounts" as const, label: "Accounts", icon: DollarSign },
   { id: "products" as const, label: "Products", icon: Package },
   { id: "marketing" as const, label: "Marketing", icon: Megaphone },
+  { id: "blogs" as const, label: "Blogs", icon: BookOpen },
   { id: "teams" as const, label: "Teams", icon: UserSquare2 },
-  { id: "settings" as const, label: "Settings", icon: Settings },
 ];
 
 export function TopHeader({ currentSection, onNavigate, notificationCount = 0, onMenuClick, user: userProp }: TopHeaderProps) {
   const [darkMode, setDarkMode] = useState(false);
   const { logout, user: authUser } = useAuthStore();
+  const isAdmin = (authUser || userProp)?.role === "admin";
   
   // Use auth store user as primary source, fallback to prop
   const user = authUser || userProp;
@@ -75,6 +77,13 @@ export function TopHeader({ currentSection, onNavigate, notificationCount = 0, o
     return user?.full_name || user?.email || 'User';
   };
 
+  const isSettingsActive =
+    currentSection === "settings-users" ||
+    currentSection === "settings-pending" ||
+    currentSection === "settings-company" ||
+    currentSection === "settings-integrations" ||
+    currentSection === "settings-preferences";
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center justify-between px-4 lg:px-6">
@@ -101,7 +110,6 @@ export function TopHeader({ currentSection, onNavigate, notificationCount = 0, o
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentSection === item.id;
-            
             return (
               <button
                 key={item.id}
@@ -118,6 +126,42 @@ export function TopHeader({ currentSection, onNavigate, notificationCount = 0, o
               </button>
             );
           })}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200",
+                  isSettingsActive
+                    ? "bg-foreground text-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                <Settings className="w-4 h-4" />
+                <span className="text-sm font-medium">Settings</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="w-56">
+              <DropdownMenuItem onClick={() => onNavigate("settings-users")}>
+                Users & Roles
+              </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem onClick={() => onNavigate("settings-pending")}>
+                  Pending Approvals
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onNavigate("settings-company")}>
+                Company
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onNavigate("settings-integrations")}>
+                Integrations
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onNavigate("settings-preferences")}>
+                Preferences
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
 
         {/* Right Actions */}
@@ -172,7 +216,7 @@ export function TopHeader({ currentSection, onNavigate, notificationCount = 0, o
                 <p className="text-xs text-muted-foreground">{user?.role || 'User'}</p>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onNavigate("settings")}>
+              <DropdownMenuItem onClick={() => onNavigate("settings-company")}>
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
               </DropdownMenuItem>

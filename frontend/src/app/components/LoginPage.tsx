@@ -13,8 +13,23 @@ export function LoginPage() {
   const [fullName, setFullName] = useState("");
   const [isSignup, setIsSignup] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [cooldownLeft, setCooldownLeft] = useState<number>(0);
 
-  const { login, signup, isLoading, error } = useAuthStore();
+  const { login, signup, isLoading, error, cooldownUntil } = useAuthStore();
+
+  useEffect(() => {
+    if (!cooldownUntil) {
+      setCooldownLeft(0);
+      return;
+    }
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+      setCooldownLeft(left);
+    };
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [cooldownUntil]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,7 +162,7 @@ export function LoginPage() {
 
                 <Button
                   type="submit"
-                  disabled={isLoading || !email || !password}
+                  disabled={isLoading || cooldownLeft > 0 || !email || !password}
                   className="w-full rounded-xl h-12 bg-accent text-accent-foreground hover:bg-accent/90"
                 >
                   {isLoading ? (
@@ -155,6 +170,8 @@ export function LoginPage() {
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Signing in...
                     </>
+                  ) : cooldownLeft > 0 ? (
+                    `Try again in ${cooldownLeft}s`
                   ) : (
                     "Sign In"
                   )}

@@ -448,6 +448,17 @@ export const authApi = {
   rejectUser: (userId: string) => api.post(`/auth/reject-user/${userId}`),
 };
 
+// Blogs API
+export const blogsApi = {
+  list: () => api.get<any[]>('/blogs'),
+  get: (id: string) => api.get<any>(`/blogs/${id}`),
+  create: (payload: any) => api.post<any>('/blogs', payload),
+  update: (id: string, payload: any) => api.put<any>(`/blogs/${id}`, payload),
+  publish: (id: string) => api.post<any>(`/blogs/${id}/publish`, {}),
+  listCategories: () => api.get<any[]>('/blogs/categories/list'),
+  createCategory: (payload: { name: string; slug?: string | null }) => api.post<any>('/blogs/categories', payload),
+};
+
 // CRM API
 export const crmApi = {
   getLeads: (params?: any) => {

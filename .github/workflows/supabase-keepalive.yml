@@ -1,0 +1,45 @@
+name: Supabase Keep Alive
+
+on:
+  schedule:
+    # Every day at 04:00 UTC
+    - cron: "0 4 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Call keep-alive Edge Function
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
+            echo "Missing secret: SUPABASE_PROJECT_REF" >&2
+            exit 1
+          fi
+          if [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "Missing secret: SUPABASE_ANON_KEY" >&2
+            exit 1
+          fi
+
+          url="https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/keep-alive"
+          echo "Pinging: ${url}"
+
+          # Capture both body and status for debugging.
+          resp="$(curl -sS -X POST "${url}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            --data '{"source":"github-actions"}' \
+            -w "\n__http_status=%{http_code}\n")"
+
+          echo "${resp}"
+          status="$(echo "${resp}" | awk -F= '/__http_status=/{print $2}' | tail -n 1)"
+          if [ "${status}" -lt 200 ] || [ "${status}" -ge 300 ]; then
+            echo "Keep-alive failed with HTTP ${status}" >&2
+            exit 1
+          fi

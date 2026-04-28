@@ -1,0 +1,2004 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Indian Company Profile Setup</title>
+    <style>
+      :root{
+        --bg:#ffffff;
+        --surface:#ffffff;
+        --border:#e0e0e0;
+        --text:#111827;
+        --muted:#6b7280;
+        --accent:#1a73e8;
+        --danger:#d32f2f;
+        --success:#2e7d32;
+        --radius:12px;
+        --input-radius:8px;
+        --line:0.5px;
+      }
+      *{ box-sizing:border-box; }
+      html,body{ height:100%; }
+      body{
+        margin:0;
+        background:var(--bg);
+        color:var(--text);
+        font:16px system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;
+        line-height:1.35;
+      }
+      h1,h2,h3{ margin:0 0 .75rem 0; font-weight:500; }
+      h1{ font-size:20px; }
+      h2{ font-size:18px; }
+      h3{ font-size:16px; }
+      a{ color:var(--accent); text-decoration:none; }
+
+      .container{
+        max-width:900px;
+        margin:0 auto;
+        padding:2rem;
+      }
+      .topbar{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:1rem;
+        margin-bottom:1rem;
+      }
+      .topbar .titleblock{ display:flex; flex-direction:column; gap:.25rem; }
+      .subtitle{ color:var(--muted); font-size:13px; }
+
+      .layout{
+        display:grid;
+        grid-template-columns:220px 1fr;
+        gap:1.25rem;
+        align-items:start;
+      }
+      .sidebar{
+        position:sticky;
+        top:1rem;
+        border:var(--line) solid var(--border);
+        border-radius:var(--radius);
+        background:var(--surface);
+        padding:1rem;
+      }
+      .nav{
+        display:flex;
+        flex-direction:column;
+        gap:.25rem;
+        margin-top:.5rem;
+      }
+      .nav button{
+        appearance:none;
+        background:transparent;
+        border:var(--line) solid transparent;
+        border-radius:10px;
+        padding:.5rem .6rem;
+        text-align:left;
+        cursor:pointer;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:.5rem;
+        color:var(--text);
+      }
+      .nav button:hover{ background:#f5f5f5; border-color:var(--border); }
+      .nav button[aria-current="true"]{ border-color:var(--accent); }
+      .nav .left{
+        display:flex; align-items:center; gap:.5rem; min-width:0;
+      }
+      .nav .label{
+        overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      }
+      .check{
+        width:16px; height:16px; display:inline-flex; align-items:center; justify-content:center;
+        border:var(--line) solid var(--border);
+        border-radius:4px;
+        color:transparent;
+        flex:0 0 auto;
+        font-size:12px;
+      }
+      .check.done{
+        border-color:var(--success);
+        color:var(--success);
+      }
+
+      .content{
+        min-width:0;
+      }
+
+      .progressWrap{
+        border:var(--line) solid var(--border);
+        border-radius:var(--radius);
+        padding:1rem 1.25rem;
+        background:var(--surface);
+        margin-bottom:1.25rem;
+      }
+      .progressRow{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:1rem;
+        margin-bottom:.5rem;
+      }
+      .progressRow .meta{ color:var(--muted); font-size:13px; }
+      .bar{
+        height:10px;
+        border:var(--line) solid var(--border);
+        border-radius:999px;
+        overflow:hidden;
+        background:#fff;
+      }
+      .bar > div{
+        height:100%;
+        width:0%;
+        background:var(--accent);
+      }
+      .actions{
+        display:flex;
+        gap:.5rem;
+        flex-wrap:wrap;
+        margin-top:.75rem;
+      }
+
+      .card{
+        background:var(--surface);
+        border:var(--line) solid var(--border);
+        border-radius:var(--radius);
+        padding:1rem 1.25rem;
+        margin-bottom:1.25rem;
+      }
+
+      .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+      .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; }
+      .row{ display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap; }
+      .field{ display:flex; flex-direction:column; gap:.35rem; min-width:220px; flex:1 1 220px; }
+      .field label{ font-size:13px; color:var(--muted); }
+      input, select, textarea{
+        width:100%;
+        height:36px;
+        border-radius:var(--input-radius);
+        border:var(--line) solid var(--border);
+        padding:.4rem .6rem;
+        font:inherit;
+        background:#fff;
+        color:var(--text);
+        outline:none;
+      }
+      textarea{
+        height:auto;
+        min-height:72px;
+        resize:vertical;
+        padding:.6rem;
+      }
+      input:focus, select:focus, textarea:focus{ border-color:var(--accent); }
+      .inline{
+        display:flex;
+        gap:.5rem;
+        align-items:center;
+      }
+      .inline > .grow{ flex:1 1 auto; min-width:0; }
+      .btn{
+        height:36px;
+        padding:.35rem .7rem;
+        border-radius:10px;
+        background:transparent;
+        border:var(--line) solid var(--border);
+        cursor:pointer;
+        font:inherit;
+        color:var(--text);
+        white-space:nowrap;
+      }
+      .btn:hover{ background:#f5f5f5; }
+      .btn.primary{ border-color:var(--accent); color:var(--accent); }
+      .btn.danger{ border-color:var(--danger); color:var(--danger); }
+      .btn.success{ border-color:var(--success); color:var(--success); }
+      .hint{ font-size:12px; color:var(--muted); margin-top:.35rem; }
+      .pill{
+        display:inline-flex;
+        align-items:center;
+        gap:.35rem;
+        border:var(--line) solid var(--border);
+        border-radius:999px;
+        padding:.2rem .55rem;
+        font-size:12px;
+        color:var(--muted);
+        background:#fff;
+      }
+      .error{ color:var(--danger); }
+      .ok{ color:var(--success); }
+
+      table{
+        width:100%;
+        border-collapse:separate;
+        border-spacing:0;
+        border:var(--line) solid var(--border);
+        border-radius:var(--radius);
+        overflow:hidden;
+        background:#fff;
+      }
+      th,td{
+        text-align:left;
+        padding:.6rem .7rem;
+        border-bottom:var(--line) solid var(--border);
+        font-size:13px;
+      }
+      th{ color:var(--muted); font-weight:500; background:#fff; }
+      tr:last-child td{ border-bottom:none; }
+
+      .docGrid{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:1rem;
+      }
+      .docBox{
+        border:var(--line) solid var(--border);
+        border-radius:var(--radius);
+        padding:1rem;
+        background:#fff;
+      }
+      .preview{
+        border:var(--line) solid var(--border);
+        border-radius:12px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:.75rem;
+        background:#fff;
+        min-height:220px;
+      }
+      canvas{ display:block; }
+
+      @media (max-width: 860px){
+        .layout{ grid-template-columns:1fr; }
+        .sidebar{ position:relative; top:auto; }
+        .docGrid{ grid-template-columns:1fr; }
+      }
+
+      /* Print (Company Profile PDF) */
+      @media print{
+        body{ background:#fff; }
+        .sidebar, .progressWrap .actions, .topbar .subtitle{ display:none !important; }
+        .container{ max-width:none; padding:0; }
+        .layout{ grid-template-columns:1fr; }
+        .card{ break-inside:avoid; }
+        .btn{ display:none !important; }
+        .nav{ display:none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="topbar">
+        <div class="titleblock">
+          <h1>Indian Company Profile Setup</h1>
+          <div class="subtitle">Internal admin tool for setting up a new Indian private limited company (client-side only).</div>
+        </div>
+        <div class="pill" id="autosavePill">Saved</div>
+      </div>
+
+      <div class="layout">
+        <aside class="sidebar">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
+            <h3 style="margin:0;">Sections</h3>
+            <button class="btn" id="clearBtn" title="Clear local data">Clear</button>
+          </div>
+          <div class="nav" id="nav"></div>
+          <div class="hint" style="margin-top:.75rem;">
+            Checkmark show section filled. Data save in localStorage.
+          </div>
+        </aside>
+
+        <main class="content">
+          <div class="progressWrap">
+            <div class="progressRow">
+              <div>
+                <div style="font-weight:500;">Progress</div>
+                <div class="meta" id="progressMeta">0% filled</div>
+              </div>
+              <div class="meta" id="progressCount">0 / 0</div>
+            </div>
+            <div class="bar"><div id="progressBar"></div></div>
+            <div class="actions">
+              <button class="btn primary" id="generateAllBtn">Generate All</button>
+              <button class="btn" id="copyAllBtn">Copy All Details</button>
+              <button class="btn" id="downloadJsonBtn">Download JSON</button>
+              <button class="btn" id="printBtn">Generate Company Profile PDF</button>
+            </div>
+            <div class="hint">Buttons no call server. All run local in browser.</div>
+          </div>
+
+          <!-- 1. Company Identity -->
+          <section class="card" id="sec-identity">
+            <h2>1. Company Identity</h2>
+            <div class="grid2">
+              <div class="field">
+                <label for="companyName">Company Name</label>
+                <input id="companyName" data-path="identity.companyName" type="text" placeholder='Acme Technologies Private Limited' />
+              </div>
+              <div class="field">
+                <label for="companyType">Company Type</label>
+                <select id="companyType" data-path="identity.companyType">
+                  <option value="">Select</option>
+                  <option>Private Limited</option>
+                  <option>OPC (One Person Company)</option>
+                  <option>Section 8</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid2" style="margin-top:1rem;">
+              <div class="field">
+                <label for="incDate">Date of Incorporation</label>
+                <input id="incDate" data-path="identity.incorporationDate" type="date" />
+              </div>
+            </div>
+
+            <div class="grid2" style="margin-top:1rem;">
+              <div class="field">
+                <label for="fyStart">Financial Year Start</label>
+                <select id="fyStart" data-path="identity.financialYearStart">
+                  <option value="">Select</option>
+                  <option value="APRIL_1">April 1</option>
+                  <option value="JAN_1">January 1</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="regState">Registered State</label>
+                <select id="regState" data-path="identity.registeredState"></select>
+                <div class="hint">State drive GST state code and address auto-fill.</div>
+              </div>
+            </div>
+
+            <div class="grid2" style="margin-top:1rem;">
+              <div class="field">
+                <label>CIN (Corporate Identity Number)</label>
+                <div class="inline">
+                  <div class="grow">
+                    <input data-path="identity.cin" type="text" placeholder="U74999MH2024PTC123456" />
+                  </div>
+                  <button class="btn" data-autogen="cin">Auto-Generate</button>
+                </div>
+                <div class="hint">Format: U{NIC}{state-code}PTC{6 digits} (year from incorporation date if present).</div>
+              </div>
+              <div class="field">
+                <label>Company PAN</label>
+                <div class="inline">
+                  <div class="grow">
+                    <input data-path="identity.pan" type="text" placeholder="AABCT1234D" />
+                  </div>
+                  <button class="btn" data-autogen="pan">Auto-Generate</button>
+                </div>
+                <div class="hint">Format: {Letter}{4 letters}{4 digits}{1 letter}.</div>
+              </div>
+            </div>
+
+            <div class="grid2" style="margin-top:1rem;">
+              <div class="field">
+                <label>Company TAN</label>
+                <div class="inline">
+                  <div class="grow">
+                    <input data-path="identity.tan" type="text" placeholder="MUMB12345C" />
+                  </div>
+                  <button class="btn" data-autogen="tan">Auto-Generate</button>
+                </div>
+                <div class="hint">Format: {4 letters}{5 digits}{1 letter}.</div>
+              </div>
+              <div class="field">
+                <label>Registered State Code (GST)</label>
+                <div class="inline">
+                  <div class="grow">
+                    <input data-path="identity.gstStateCode" type="text" placeholder="27" readonly />
+                  </div>
+                  <div class="pill" id="stateCodePill">Auto</div>
+                </div>
+                <div class="hint">Auto from Registered State.</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 2. Tax Registrations -->
+          <section class="card" id="sec-tax">
+            <h2>2. Tax Registrations</h2>
+            <div class="grid2">
+              <div class="field">
+                <label>GST Number</label>
+                <div class="inline">
+                  <div class="grow">
+                    <input data-path="tax.gstNumber" type="text" placeholder="27AABCT1234D1ZV" />
+                  </div>
+                  <button class="btn" data-autogen="gst">Auto-Generate</button>
+                </div>
+                <div class="hint">Format: {state-code}{PAN}{1 digit}Z{1 alphanumeric}.</div>
+              </div>
+              <div class="field">
+                <label>GST Registration State</label>
+                <input data-path="tax.gstRegState" type="text" placeholder="Auto from Registered State" readonly />
+              </div>
+            </div>
+
+            <div class="grid2" style="margin-top:1rem;">
+              <div class="field">
+                <label>MSME / Udyam Registration Number</label>
+                <div class="inline">
+                  <div class="grow">
+                    <input data-path="tax.udyam" type="text" placeholder="UDYAM-MH-12-1234567" />
+                  </div>
+                  <button class="btn" data-autogen="udyam">Auto-Generate</button>
+                </div>
+                <div class="hint">Format: UDYAM-{state}-{2 digits}-{7 digits}.</div>
+              </div>
+            </div>
+
+            <div class="grid2" style="margin-top:1rem;">
+              <div class="field">
+                <label for="ptNo">Professional Tax Registration Number (PT No.)</label>
+                <div class="inline">
+                  <div class="grow">
+                    <input id="ptNo" data-path="tax.ptNo" type="text" placeholder="PT-XXXXXX" />
+                  </div>
+                  <button class="btn" data-autogen="ptno">Auto-Generate</button>
+                </div>
+              </div>
+              <div class="field">
+                <label class="hint" style="margin:0;">Tip</label>
+                <div class="hint">You can edit any auto-generated value after fill.</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 3. Registered Office Address -->
+          <section class="card" id="sec-address">
+            <h2>3. Registered Office Address</h2>
+            <div class="grid2">
+              <div class="field">
+                <label>Address Line 1</label>
+                <input data-path="address.line1" type="text" placeholder="Street, building, etc." />
+              </div>
+              <div class="field">
+                <label>Address Line 2</label>
+                <input data-path="address.line2" type="text" placeholder="Area, landmark, etc." />
+              </div>
+            </div>
+            <div class="grid3" style="margin-top:1rem;">
+              <div class="field">
+                <label>City</label>
+                <input data-path="address.city" type="text" placeholder="Mumbai" />
+              </div>
+              <div class="field">
+                <label>State</label>
+                <input data-path="address.state" type="text" placeholder="Auto from Registered State" readonly />
+              </div>
+              <div class="field">
+                <label>PIN Code</label>
+                <input data-path="address.pin" type="text" inputmode="numeric" placeholder="400001" />
+              </div>
+            </div>
+            <div class="grid3" style="margin-top:1rem;">
+              <div class="field">
+                <label>Phone Number</label>
+                <div class="inline">
+                  <div class="pill">+91</div>
+                  <div class="grow">
+                    <input data-path="address.phone" type="text" inputmode="numeric" placeholder="9876543210" />
+                  </div>
+                </div>
+              </div>
+              <div class="field">
+                <label>Fax Number</label>
+                <input data-path="address.fax" type="text" placeholder="Optional" />
+              </div>
+              <div class="field">
+                <label class="hint" style="margin:0;">Auto</label>
+                <div class="hint">State auto-fill from Company Identity.</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 4. Company Email & Communication -->
+          <section class="card" id="sec-email">
+            <h2>4. Company Email & Communication</h2>
+            <div class="grid2">
+              <div class="field">
+                <label>Official Email</label>
+                <input data-path="email.official" type="email" placeholder="info@company.com" />
+                <div class="hint" id="emailValidation"></div>
+              </div>
+              <div class="field">
+                <label>Website URL</label>
+                <input data-path="email.website" type="url" placeholder="https://company.com" />
+              </div>
+            </div>
+            <div class="grid2" style="margin-top:1rem;">
+              <div class="field">
+                <label>Accounts Email</label>
+                <input data-path="email.accounts" type="email" placeholder="accounts@company.com" />
+              </div>
+              <div class="field">
+                <label>HR/Admin Email</label>
+                <input data-path="email.hr" type="email" placeholder="hr@company.com" />
+              </div>
+            </div>
+            <div class="grid2" style="margin-top:1rem;">
+              <div class="field">
+                <label>Legal / Compliance Email</label>
+                <input data-path="email.legal" type="email" placeholder="legal@company.com" />
+              </div>
+              <div class="field">
+                <label>Auto-generate sample emails</label>
+                <button class="btn" id="genEmailsBtn">Generate 4 Sample Emails</button>
+                <div class="hint">Format: {role}@{companydomain}.com (domain from website/email/company name).</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 5. Directors & Officers -->
+          <section class="card" id="sec-directors">
+            <h2>5. Directors & Officers</h2>
+            <div class="row" style="justify-content:space-between;">
+              <div class="hint">Add up to 5 directors. First director used for signature block.</div>
+              <button class="btn" id="addDirectorBtn">Add Director</button>
+            </div>
+            <div id="directorsWrap" style="margin-top:1rem; display:flex; flex-direction:column; gap:1rem;"></div>
+          </section>
+
+          <!-- 6. Bank Details -->
+          <section class="card" id="sec-bank">
+            <h2>6. Bank Details</h2>
+            <div class="grid2">
+              <div class="field">
+                <label>Bank Name</label>
+                <select data-path="bank.bankName">
+                  <option value="">Select</option>
+                  <option>SBI</option>
+                  <option>HDFC</option>
+                  <option>ICICI</option>
+                  <option>Axis</option>
+                  <option>Kotak</option>
+                  <option>Yes Bank</option>
+                  <option>Punjab National Bank</option>
+                  <option>Bank of Baroda</option>
+                  <option>Canara Bank</option>
+                  <option>IndusInd</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Account Type</label>
+                <select data-path="bank.accountType">
+                  <option value="">Select</option>
+                  <option>Current</option>
+                  <option>Savings</option>
+                  <option>CC</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid2" style="margin-top:1rem;">
+              <div class="field">
+                <label>Account Number</label>
+                <input data-path="bank.accountNumber" type="text" inputmode="numeric" placeholder="XXXXXXXXXXXX" />
+              </div>
+              <div class="field">
+                <label>IFSC Code</label>
+                <input data-path="bank.ifsc" type="text" placeholder="HDFC0001234" />
+              </div>
+            </div>
+            <div class="grid2" style="margin-top:1rem;">
+              <div class="field">
+                <label>Branch Name</label>
+                <input data-path="bank.branchName" type="text" placeholder="Main Branch" />
+              </div>
+              <div class="field">
+                <label>MICR Code</label>
+                <input data-path="bank.micr" type="text" placeholder="9-digit MICR" />
+              </div>
+            </div>
+            <div class="grid2" style="margin-top:1rem;">
+              <div class="field">
+                <label>Swift Code (International)</label>
+                <input data-path="bank.swift" type="text" placeholder="Optional" />
+              </div>
+              <div class="field">
+                <label>Branch Address</label>
+                <input data-path="bank.branchAddress" type="text" placeholder="Street, City, State" />
+              </div>
+            </div>
+          </section>
+
+          <!-- 7. Company Documents -->
+          <section class="card" id="sec-docs">
+            <h2>7. Company Documents (Generate & Download)</h2>
+            <div class="docGrid" style="margin-top:.75rem;">
+              <div class="docBox">
+                <h3 style="margin-bottom:.5rem;">a) Company Seal / Round Stamp</h3>
+                <div class="preview"><canvas id="sealCanvas" width="200" height="200"></canvas></div>
+                <div class="actions" style="margin-top:.75rem;">
+                  <button class="btn" id="genSealBtn">Generate</button>
+                  <button class="btn" id="dlSealPngBtn">Download PNG</button>
+                  <button class="btn" id="dlSealSvgBtn">Download SVG</button>
+                </div>
+                <div class="hint">200x200. Navy ring, white text. Company name + CIN + PRIVATE LIMITED.</div>
+              </div>
+
+              <div class="docBox">
+                <h3 style="margin-bottom:.5rem;">b) Company Logo Placeholder</h3>
+                <div class="preview"><canvas id="logoCanvas" width="400" height="400"></canvas></div>
+                <div class="actions" style="margin-top:.75rem;">
+                  <button class="btn" id="genLogoBtn">Generate</button>
+                  <button class="btn" id="dlLogoPngBtn">Download PNG</button>
+                </div>
+                <div class="hint">400x400 PNG. Initials from company name. Background color from name hash.</div>
+              </div>
+
+              <div class="docBox">
+                <h3 style="margin-bottom:.5rem;">c) Authorized Signatory Signature Block</h3>
+                <div class="preview" style="min-height:220px;">
+                  <div id="sigPreview" style="width:100%;"></div>
+                </div>
+                <div class="actions" style="margin-top:.75rem;">
+                  <button class="btn" id="genSigBtn">Generate</button>
+                  <button class="btn" id="dlSigSvgBtn">Download SVG</button>
+                  <button class="btn" id="dlSigPngBtn">Download PNG</button>
+                </div>
+                <div class="hint">Uses first director name. PNG 600x200. Also SVG.</div>
+              </div>
+
+              <div class="docBox">
+                <h3 style="margin-bottom:.5rem;">d) Letterhead Template Preview</h3>
+                <div class="preview"><canvas id="letterCanvas" width="600" height="848"></canvas></div>
+                <div class="actions" style="margin-top:.75rem;">
+                  <button class="btn" id="genLetterBtn">Generate</button>
+                  <button class="btn" id="dlLetterPngBtn">Download PNG</button>
+                </div>
+                <div class="hint">A4 preview 600x848. Logo left, company + address + contact right, divider line, footer with signature + seal placeholder.</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 8. Compliance Calendar -->
+          <section class="card" id="sec-compliance">
+            <h2>8. Compliance Calendar (auto-generate)</h2>
+            <div class="hint" style="margin-bottom:.75rem;">
+              Deadlines based on incorporation date + financial year start. Recurring due dates show next upcoming in current year context.
+            </div>
+            <div class="actions" style="margin-top:0; margin-bottom:.75rem;">
+              <button class="btn" id="regenComplianceBtn">Regenerate Calendar</button>
+            </div>
+            <div id="complianceTableWrap"></div>
+          </section>
+
+          <!-- 9. Export / Summary -->
+          <section class="card" id="sec-export">
+            <h2>9. Export / Summary</h2>
+            <div class="grid2">
+              <div class="field">
+                <label>Formatted Preview (read-only)</label>
+                <textarea id="summaryText" readonly></textarea>
+                <div class="hint">Use “Copy All Details” to copy this text.</div>
+              </div>
+              <div class="field">
+                <label>Actions</label>
+                <div class="actions" style="margin-top:0;">
+                  <button class="btn" id="copyAllBtn2">Copy All Details</button>
+                  <button class="btn" id="downloadJsonBtn2">Download JSON</button>
+                  <button class="btn" id="printBtn2">Generate Company Profile PDF</button>
+                </div>
+                <div class="hint">Print uses browser print dialog (save as PDF).</div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      "use strict";
+
+      const STORAGE_KEY = "indian_company_profile_setup_v1";
+      const autosavePill = document.getElementById("autosavePill");
+
+      const INDIA_STATES_UTS = [
+        // States (28)
+        { name:"Andhra Pradesh", codeAlpha:"AP", codeNum:"37" },
+        { name:"Arunachal Pradesh", codeAlpha:"AR", codeNum:"12" },
+        { name:"Assam", codeAlpha:"AS", codeNum:"18" },
+        { name:"Bihar", codeAlpha:"BR", codeNum:"10" },
+        { name:"Chhattisgarh", codeAlpha:"CG", codeNum:"22" },
+        { name:"Goa", codeAlpha:"GA", codeNum:"30" },
+        { name:"Gujarat", codeAlpha:"GJ", codeNum:"24" },
+        { name:"Haryana", codeAlpha:"HR", codeNum:"06" },
+        { name:"Himachal Pradesh", codeAlpha:"HP", codeNum:"02" },
+        { name:"Jharkhand", codeAlpha:"JH", codeNum:"20" },
+        { name:"Karnataka", codeAlpha:"KA", codeNum:"29" },
+        { name:"Kerala", codeAlpha:"KL", codeNum:"32" },
+        { name:"Madhya Pradesh", codeAlpha:"MP", codeNum:"23" },
+        { name:"Maharashtra", codeAlpha:"MH", codeNum:"27" },
+        { name:"Manipur", codeAlpha:"MN", codeNum:"14" },
+        { name:"Meghalaya", codeAlpha:"ML", codeNum:"17" },
+        { name:"Mizoram", codeAlpha:"MZ", codeNum:"15" },
+        { name:"Nagaland", codeAlpha:"NL", codeNum:"13" },
+        { name:"Odisha", codeAlpha:"OD", codeNum:"21" },
+        { name:"Punjab", codeAlpha:"PB", codeNum:"03" },
+        { name:"Rajasthan", codeAlpha:"RJ", codeNum:"08" },
+        { name:"Sikkim", codeAlpha:"SK", codeNum:"11" },
+        { name:"Tamil Nadu", codeAlpha:"TN", codeNum:"33" },
+        { name:"Telangana", codeAlpha:"TS", codeNum:"36" },
+        { name:"Tripura", codeAlpha:"TR", codeNum:"16" },
+        { name:"Uttar Pradesh", codeAlpha:"UP", codeNum:"09" },
+        { name:"Uttarakhand", codeAlpha:"UK", codeNum:"05" },
+        { name:"West Bengal", codeAlpha:"WB", codeNum:"19" },
+        // UTs (8)
+        { name:"Andaman and Nicobar Islands", codeAlpha:"AN", codeNum:"35" },
+        { name:"Chandigarh", codeAlpha:"CH", codeNum:"04" },
+        { name:"Dadra and Nagar Haveli and Daman and Diu", codeAlpha:"DN", codeNum:"26" },
+        { name:"Delhi", codeAlpha:"DL", codeNum:"07" },
+        { name:"Jammu and Kashmir", codeAlpha:"JK", codeNum:"01" },
+        { name:"Ladakh", codeAlpha:"LA", codeNum:"38" },
+        { name:"Lakshadweep", codeAlpha:"LD", codeNum:"31" },
+        { name:"Puducherry", codeAlpha:"PY", codeNum:"34" },
+      ];
+
+      const SECTIONS = [
+        { id:"identity", title:"1. Company Identity", anchor:"sec-identity" },
+        { id:"tax", title:"2. Tax Registrations", anchor:"sec-tax" },
+        { id:"address", title:"3. Registered Office Address", anchor:"sec-address" },
+        { id:"email", title:"4. Company Email & Communication", anchor:"sec-email" },
+        { id:"directors", title:"5. Directors & Officers", anchor:"sec-directors" },
+        { id:"bank", title:"6. Bank Details", anchor:"sec-bank" },
+        { id:"docs", title:"7. Company Documents", anchor:"sec-docs" },
+        { id:"compliance", title:"8. Compliance Calendar", anchor:"sec-compliance" },
+        { id:"export", title:"9. Export / Summary", anchor:"sec-export" },
+      ];
+
+      const defaultState = {
+        identity: {
+          companyName: "",
+          cin: "",
+          companyType: "Private Limited",
+          incorporationDate: "",
+          financialYearStart: "APRIL_1",
+          registeredState: "",
+          gstStateCode: "",
+          pan: "",
+          tan: "",
+        },
+        tax: {
+          gstNumber: "",
+          gstRegState: "",
+          udyam: "",
+          ptNo: "",
+        },
+        address: {
+          line1: "",
+          line2: "",
+          city: "",
+          state: "",
+          pin: "",
+          phone: "",
+          fax: "",
+        },
+        email: {
+          official: "",
+          accounts: "",
+          hr: "",
+          legal: "",
+          website: "",
+        },
+        directors: [],
+        bank: {
+          bankName: "",
+          accountNumber: "",
+          ifsc: "",
+          accountType: "",
+          branchName: "",
+          branchAddress: "",
+          micr: "",
+          swift: "",
+        },
+        docs: {
+          sealSvg: "",
+          sigSvg: "",
+        },
+        compliance: {
+          rows: [],
+          generatedAt: "",
+        },
+      };
+
+      let state = deepClone(defaultState);
+      let activeSectionId = "identity";
+      let saveTimer = null;
+
+      function deepClone(obj){ return JSON.parse(JSON.stringify(obj)); }
+      function nowIso(){ return new Date().toISOString(); }
+      function pad(n, w){ return String(n).padStart(w, "0"); }
+      function randInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
+      function pick(arr){ return arr[randInt(0, arr.length-1)]; }
+      function randDigits(n){
+        let s = "";
+        for (let i=0;i<n;i++) s += String(randInt(0,9));
+        return s;
+      }
+      function randLetters(n){
+        const A="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        let s="";
+        for (let i=0;i<n;i++) s += A[randInt(0,A.length-1)];
+        return s;
+      }
+      function randAlphaNum(n){
+        const A="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let s="";
+        for (let i=0;i<n;i++) s += A[randInt(0,A.length-1)];
+        return s;
+      }
+      function normalizeCompanyWords(name){
+        const stop = new Set(["PRIVATE","LIMITED","PVT","LTD","INDIA","INDIAN","COMPANY","TECHNOLOGIES","TECHNOLOGY","CO","PTE","LLP"]);
+        return (name || "")
+          .replace(/[^a-zA-Z\s]/g, " ")
+          .split(/\s+/)
+          .filter(Boolean)
+          .map(w => w.trim())
+          .filter(w => !stop.has(w.toUpperCase()));
+      }
+      function getInitials(name){
+        const words = normalizeCompanyWords(name);
+        const base = words.length ? words : (name || "").split(/\s+/).filter(Boolean);
+        const letters = base.slice(0, 3).map(w => (w[0]||"").toUpperCase()).join("");
+        return letters || "CO";
+      }
+      function hashColor(str){
+        let h = 0;
+        for (let i=0;i<str.length;i++) h = (h*31 + str.charCodeAt(i)) >>> 0;
+        const hue = h % 360;
+        // flat color (no gradient)
+        return `hsl(${hue} 55% 45%)`;
+      }
+
+      function getByPath(obj, path){
+        const parts = path.split(".");
+        let cur = obj;
+        for (const p of parts){
+          if (cur == null) return undefined;
+          cur = cur[p];
+        }
+        return cur;
+      }
+      function setByPath(obj, path, value){
+        const parts = path.split(".");
+        let cur = obj;
+        for (let i=0;i<parts.length-1;i++){
+          const p = parts[i];
+          if (cur[p] == null) cur[p] = {};
+          cur = cur[p];
+        }
+        cur[parts[parts.length-1]] = value;
+      }
+
+      function load(){
+        try{
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          state = mergeState(defaultState, parsed);
+        }catch(e){}
+      }
+      function mergeState(base, incoming){
+        if (Array.isArray(base)){
+          return Array.isArray(incoming) ? incoming : base;
+        }
+        if (typeof base === "object" && base){
+          const out = deepClone(base);
+          for (const k of Object.keys(incoming || {})){
+            if (k in out){
+              out[k] = mergeState(out[k], incoming[k]);
+            }else{
+              out[k] = incoming[k];
+            }
+          }
+          return out;
+        }
+        return (incoming !== undefined) ? incoming : base;
+      }
+      function scheduleSave(){
+        autosavePill.textContent = "Saving…";
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+          try{
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            autosavePill.textContent = "Saved";
+          }catch(e){
+            autosavePill.textContent = "Save failed";
+          }
+        }, 250);
+      }
+
+      function populateStates(){
+        const sel = document.getElementById("regState");
+        sel.innerHTML = '<option value="">Select</option>' + INDIA_STATES_UTS
+          .map(s => `<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`)
+          .join("");
+      }
+
+      function escapeHtml(s){
+        return String(s)
+          .replaceAll("&","&amp;")
+          .replaceAll("<","&lt;")
+          .replaceAll(">","&gt;")
+          .replaceAll('"',"&quot;")
+          .replaceAll("'","&#039;");
+      }
+
+      function bindInputs(){
+        const nodes = document.querySelectorAll("[data-path]");
+        nodes.forEach(node => {
+          const path = node.getAttribute("data-path");
+          const val = getByPath(state, path);
+          if (node.type === "checkbox") node.checked = !!val;
+          else node.value = val ?? "";
+
+          node.addEventListener("input", () => {
+            const v = node.type === "checkbox" ? node.checked : node.value;
+            setByPath(state, path, v);
+          if (path === "identity.registeredState" || path === "identity.incorporationDate" || path === "identity.pan"){
+              syncDerivedFields();
+            }
+            if (path.startsWith("email.")){
+              validateEmails();
+            }
+            updateAll();
+            scheduleSave();
+          });
+        });
+      }
+
+      function syncDerivedFields(){
+        const stName = state.identity.registeredState;
+        const stObj = INDIA_STATES_UTS.find(s => s.name === stName);
+        state.identity.gstStateCode = stObj ? stObj.codeNum : "";
+        state.tax.gstRegState = stName || "";
+        state.address.state = stName || "";
+      }
+
+      function renderNav(){
+        const nav = document.getElementById("nav");
+        nav.innerHTML = "";
+        SECTIONS.forEach(sec => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.setAttribute("data-sec", sec.id);
+          btn.setAttribute("aria-current", String(sec.id === activeSectionId));
+          const left = document.createElement("div");
+          left.className = "left";
+
+          const check = document.createElement("span");
+          check.className = "check";
+          check.textContent = "✓";
+          check.id = `check-${sec.id}`;
+
+          const label = document.createElement("span");
+          label.className = "label";
+          label.textContent = sec.title;
+
+          left.appendChild(check);
+          left.appendChild(label);
+
+          const right = document.createElement("span");
+          right.className = "pill";
+          right.id = `pill-${sec.id}`;
+          right.textContent = "";
+          right.style.visibility = "hidden";
+
+          btn.appendChild(left);
+          btn.appendChild(right);
+
+          btn.addEventListener("click", () => {
+            activeSectionId = sec.id;
+            document.querySelectorAll(".nav button").forEach(b => b.setAttribute("aria-current", "false"));
+            btn.setAttribute("aria-current", "true");
+            document.getElementById(sec.anchor).scrollIntoView({ behavior:"smooth", block:"start" });
+          });
+          nav.appendChild(btn);
+        });
+      }
+
+      function validateEmails(){
+        const el = document.getElementById("emailValidation");
+        const email = state.email.official || "";
+        if (!email){
+          el.textContent = "";
+          return;
+        }
+        const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        el.textContent = ok ? "Email looks valid." : "Email missing '@' or domain.";
+        el.className = "hint " + (ok ? "ok" : "error");
+      }
+
+      // ----------------- Auto generation -----------------
+      function deriveYear(){
+        const d = state.identity.incorporationDate;
+        if (d){
+          const dt = new Date(d);
+          if (!Number.isNaN(dt.getTime())) return String(dt.getFullYear());
+        }
+        return String(new Date().getFullYear());
+      }
+      function stateAlpha(){
+        const stObj = INDIA_STATES_UTS.find(s => s.name === state.identity.registeredState);
+        return stObj ? stObj.codeAlpha : "MH";
+      }
+      function stateNum(){
+        return state.identity.gstStateCode || (INDIA_STATES_UTS.find(s => s.name === state.identity.registeredState)?.codeNum || "27");
+      }
+      function nicFive(){
+        return pad(String(randInt(10000, 99999)), 5).slice(0,5);
+      }
+
+      function genPAN(){
+        // {Letter}{4 letters}{4 digits}{1 letter}
+        const first = randLetters(1);
+        const four = randLetters(4);
+        const digits = randDigits(4);
+        const last = randLetters(1);
+        return (first + four + digits + last).toUpperCase();
+      }
+      function genTAN(){
+        // {4 letters}{5 digits}{1 letter}
+        return (randLetters(4) + randDigits(5) + randLetters(1)).toUpperCase();
+      }
+      function genCIN(){
+        // U{5-digit industry code}{state-code}PTC{6-digit number}
+        const u = "U";
+        const nic = nicFive();
+        const st = stateAlpha();
+        const year = deriveYear();
+        const suffix = "PTC";
+        const num = randDigits(6);
+        return `${u}${nic}${st}${year}${suffix}${num}`.toUpperCase();
+      }
+      function genGST(){
+        // {2-digit state code}{PAN}{1 digit}{Z}{1 alphanumeric}
+        const st = stateNum();
+        const pan = (state.identity.pan || "").trim().toUpperCase() || genPAN();
+        const ent = randDigits(1);
+        const last = randAlphaNum(1);
+        return `${st}${pan}${ent}Z${last}`.toUpperCase();
+      }
+      function genUDYAM(){
+        // UDYAM-{state}-{2 digits}-{7 digits}
+        return `UDYAM-${stateAlpha()}-${randDigits(2)}-${randDigits(7)}`.toUpperCase();
+      }
+      function genIEC(){
+        return randDigits(10);
+      }
+      function genPTNo(){
+        return `PT-${randLetters(2)}${randDigits(6)}`.toUpperCase();
+      }
+      function genShopsReg(){
+        return `SE-${stateAlpha()}-${randDigits(6)}`.toUpperCase();
+      }
+
+      function handleAutoGen(kind){
+        if (kind === "pan"){
+          state.identity.pan = genPAN();
+        }else if (kind === "tan"){
+          state.identity.tan = genTAN();
+        }else if (kind === "cin"){
+          state.identity.cin = genCIN();
+        }else if (kind === "gst"){
+          if (!state.identity.pan) state.identity.pan = genPAN();
+          state.tax.gstNumber = genGST();
+        }else if (kind === "udyam"){
+          state.tax.udyam = genUDYAM();
+        }else if (kind === "ptno"){
+          state.tax.ptNo = genPTNo();
+        }
+        syncDerivedFields();
+        syncInputsFromState();
+        updateAll();
+        scheduleSave();
+      }
+
+      function generateAll(){
+        if (!state.identity.pan) state.identity.pan = genPAN();
+        state.identity.tan = state.identity.tan || genTAN();
+        state.identity.cin = state.identity.cin || genCIN();
+        state.tax.gstNumber = state.tax.gstNumber || genGST();
+        state.tax.udyam = state.tax.udyam || genUDYAM();
+        state.tax.ptNo = state.tax.ptNo || genPTNo();
+        syncDerivedFields();
+        syncInputsFromState();
+        updateAll();
+        scheduleSave();
+      }
+
+      function syncInputsFromState(){
+        document.querySelectorAll("[data-path]").forEach(node => {
+          const path = node.getAttribute("data-path");
+          const val = getByPath(state, path);
+          if (node.type === "checkbox") node.checked = !!val;
+          else if (node.value !== (val ?? "")) node.value = val ?? "";
+        });
+      }
+
+      // ----------------- Directors -----------------
+      function emptyDirector(){
+        return {
+          name: "",
+          din: "",
+          designation: "",
+          appointmentDate: "",
+          pan: "",
+          nationality: "Indian",
+        };
+      }
+      function ensureDirectors(){
+        if (!Array.isArray(state.directors)) state.directors = [];
+        if (state.directors.length === 0){
+          state.directors.push(emptyDirector());
+        }
+      }
+      function renderDirectors(){
+        const wrap = document.getElementById("directorsWrap");
+        wrap.innerHTML = "";
+        state.directors.forEach((d, idx) => {
+          const box = document.createElement("div");
+          box.className = "card";
+          box.style.margin = "0";
+          box.style.padding = "1rem 1.25rem";
+
+          const top = document.createElement("div");
+          top.style.display = "flex";
+          top.style.alignItems = "center";
+          top.style.justifyContent = "space-between";
+          top.style.gap = ".75rem";
+
+          const title = document.createElement("h3");
+          title.textContent = `Director ${idx + 1}`;
+          title.style.margin = "0";
+
+          const rm = document.createElement("button");
+          rm.className = "btn danger";
+          rm.textContent = "Remove";
+          rm.disabled = state.directors.length <= 1;
+          rm.addEventListener("click", () => {
+            state.directors.splice(idx, 1);
+            renderDirectors();
+            updateAll();
+            scheduleSave();
+          });
+
+          top.appendChild(title);
+          top.appendChild(rm);
+          box.appendChild(top);
+
+          const grid = document.createElement("div");
+          grid.className = "grid2";
+          grid.style.marginTop = "1rem";
+
+          grid.appendChild(makeField(`Name`, `directors.${idx}.name`, "Full name"));
+          grid.appendChild(makeField(`DIN (8 digits)`, `directors.${idx}.din`, "12345678", { inputmode:"numeric" }));
+          grid.appendChild(makeField(`Designation`, `directors.${idx}.designation`, "Director"));
+          grid.appendChild(makeField(`Date of Appointment`, `directors.${idx}.appointmentDate`, "", { type:"date" }));
+          grid.appendChild(makeField(`PAN`, `directors.${idx}.pan`, "AABCT1234D"));
+          grid.appendChild(makeField(`Nationality`, `directors.${idx}.nationality`, "Indian"));
+
+          box.appendChild(grid);
+          wrap.appendChild(box);
+        });
+
+        const btn = document.getElementById("addDirectorBtn");
+        btn.disabled = state.directors.length >= 5;
+        btn.textContent = state.directors.length >= 5 ? "Max 5 Directors" : "Add Director";
+      }
+      function makeField(label, path, placeholder, opts){
+        const field = document.createElement("div");
+        field.className = "field";
+        const lab = document.createElement("label");
+        lab.textContent = label;
+        const input = document.createElement("input");
+        input.setAttribute("data-path", path);
+        input.placeholder = placeholder || "";
+        if (opts && opts.type) input.type = opts.type;
+        if (opts && opts.inputmode) input.setAttribute("inputmode", opts.inputmode);
+        input.value = getByPath(state, path) ?? "";
+        input.addEventListener("input", () => {
+          setByPath(state, path, input.value);
+          updateAll();
+          scheduleSave();
+        });
+        field.appendChild(lab);
+        field.appendChild(input);
+        return field;
+      }
+
+      // ----------------- Documents -----------------
+      const sealCanvas = document.getElementById("sealCanvas");
+      const logoCanvas = document.getElementById("logoCanvas");
+      const letterCanvas = document.getElementById("letterCanvas");
+      const sigPreview = document.getElementById("sigPreview");
+
+      function drawSeal(){
+        const ctx = sealCanvas.getContext("2d");
+        const w = sealCanvas.width, h = sealCanvas.height;
+        ctx.clearRect(0,0,w,h);
+        const navy = "#0b2a5a";
+        const name = (state.identity.companyName || "Company Name").toUpperCase();
+        const cin = (state.identity.cin || "CIN").toUpperCase();
+        const innerText = "PRIVATE LIMITED";
+
+        // ring
+        ctx.fillStyle = navy;
+        ctx.beginPath();
+        ctx.arc(w/2,h/2,98,0,Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(w/2,h/2,82,0,Math.PI*2);
+        ctx.fill();
+
+        // inner circle
+        ctx.fillStyle = navy;
+        ctx.beginPath();
+        ctx.arc(w/2,h/2,56,0,Math.PI*2);
+        ctx.fill();
+
+        // center emblem star
+        ctx.fillStyle = "#fff";
+        drawStar(ctx, w/2, h/2, 5, 18, 8);
+        ctx.fill();
+
+        // innerText
+        ctx.fillStyle = "#fff";
+        ctx.font = "600 11px system-ui, Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(innerText, w/2, h/2 + 44);
+
+        // cin
+        ctx.font = "600 10px system-ui, Inter, sans-serif";
+        ctx.fillText(cnClamp(cin, 18), w/2, h/2 + 62);
+
+        // outer ring text
+        drawCircularText(ctx, name, w/2, h/2, 90, -Math.PI/2, navy);
+      }
+
+      function cnClamp(s, maxWords){
+        const parts = String(s || "").split(/\s+/).filter(Boolean);
+        return parts.slice(0, maxWords).join(" ");
+      }
+
+      function drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius){
+        let rot = Math.PI / 2 * 3;
+        let x = cx;
+        let y = cy;
+        const step = Math.PI / spikes;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - outerRadius);
+        for (let i=0; i<spikes; i++){
+          x = cx + Math.cos(rot) * outerRadius;
+          y = cy + Math.sin(rot) * outerRadius;
+          ctx.lineTo(x, y);
+          rot += step;
+          x = cx + Math.cos(rot) * innerRadius;
+          y = cy + Math.sin(rot) * innerRadius;
+          ctx.lineTo(x, y);
+          rot += step;
+        }
+        ctx.lineTo(cx, cy - outerRadius);
+        ctx.closePath();
+      }
+
+      function drawCircularText(ctx, text, cx, cy, radius, startAngle, ringColor){
+        const t = String(text || "").toUpperCase();
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.fillStyle = "#fff";
+        ctx.font = "600 10px system-ui, Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const chars = t.split("");
+        const angleStep = (Math.PI * 2) / Math.max(chars.length, 40);
+        let angle = startAngle - (chars.length * angleStep) / 2;
+        for (const ch of chars){
+          ctx.save();
+          ctx.rotate(angle);
+          ctx.translate(0, -radius);
+          ctx.rotate(-angle);
+          ctx.fillText(ch, 0, 0);
+          ctx.restore();
+          angle += angleStep;
+        }
+        ctx.restore();
+      }
+
+      function sealSvgString(){
+        const navy = "#0b2a5a";
+        const name = (state.identity.companyName || "Company Name").toUpperCase();
+        const cin = (state.identity.cin || "CIN").toUpperCase();
+        const initials = getInitials(state.identity.companyName || "CO");
+        // simple ring text (not perfect path text, but valid SVG)
+        return `
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <path id="ring" d="M100,10 a90,90 0 1,1 -0.01,0" />
+  </defs>
+  <circle cx="100" cy="100" r="98" fill="${navy}"/>
+  <circle cx="100" cy="100" r="82" fill="#ffffff"/>
+  <circle cx="100" cy="100" r="56" fill="${navy}"/>
+  <text font-family="system-ui, Inter, sans-serif" font-size="10" font-weight="600" fill="#ffffff">
+    <textPath href="#ring" startOffset="50%" text-anchor="middle">${escapeXml(name)}</textPath>
+  </text>
+  <g fill="#ffffff">
+    <polygon points="100,78 106,92 121,92 109,101 114,116 100,108 86,116 91,101 79,92 94,92"/>
+  </g>
+  <text x="100" y="145" text-anchor="middle" font-family="system-ui, Inter, sans-serif" font-size="11" font-weight="600" fill="#ffffff">PRIVATE LIMITED</text>
+  <text x="100" y="163" text-anchor="middle" font-family="system-ui, Inter, sans-serif" font-size="10" font-weight="600" fill="#ffffff">${escapeXml(cnClamp(cin,18))}</text>
+  <text x="100" y="115" text-anchor="middle" font-family="system-ui, Inter, sans-serif" font-size="12" font-weight="700" fill="#ffffff">${escapeXml(initials)}</text>
+</svg>`.trim();
+      }
+
+      function escapeXml(s){
+        return String(s)
+          .replaceAll("&","&amp;")
+          .replaceAll("<","&lt;")
+          .replaceAll(">","&gt;")
+          .replaceAll('"',"&quot;")
+          .replaceAll("'","&apos;");
+      }
+
+      function drawLogo(){
+        const ctx = logoCanvas.getContext("2d");
+        const w=logoCanvas.width, h=logoCanvas.height;
+        ctx.clearRect(0,0,w,h);
+        const name = state.identity.companyName || "Company Name";
+        ctx.fillStyle = hashColor(name);
+        ctx.fillRect(0,0,w,h);
+        const initials = getInitials(name);
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = "700 120px system-ui, Inter, sans-serif";
+        ctx.fillText(initials, w/2, h/2);
+      }
+
+      function signatureSvgString(){
+        const company = state.identity.companyName || "Company Name";
+        const d0 = state.directors[0] || emptyDirector();
+        const name = d0.name || "Director Name";
+        const designation = d0.designation || "Director";
+        const dateLine = new Date().toLocaleDateString();
+
+        const w = 600, h = 200;
+        const sigPath = buildSignaturePath(name, 60, 78, 480, 50);
+        return `
+<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <rect x="0.5" y="0.5" width="${w-1}" height="${h-1}" fill="#ffffff" stroke="#e0e0e0" stroke-width="0.5" rx="12"/>
+  <path d="${sigPath}" fill="none" stroke="#111827" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="60" y="130" font-family="system-ui, Inter, sans-serif" font-size="13" font-weight="500" fill="#111827">${escapeXml(name)}</text>
+  <text x="60" y="150" font-family="system-ui, Inter, sans-serif" font-size="12" font-weight="500" fill="#6b7280">${escapeXml(designation)}</text>
+  <text x="60" y="170" font-family="system-ui, Inter, sans-serif" font-size="12" font-weight="500" fill="#6b7280">Date: ${escapeXml(dateLine)}</text>
+  <text x="360" y="150" font-family="system-ui, Inter, sans-serif" font-size="12" font-weight="500" fill="#6b7280">${escapeXml(company)}</text>
+  <rect x="470.5" y="118.5" width="110" height="60" fill="#ffffff" stroke="#e0e0e0" stroke-width="0.5" rx="10"/>
+  <text x="525" y="151" text-anchor="middle" font-family="system-ui, Inter, sans-serif" font-size="11" font-weight="600" fill="#6b7280">Seal</text>
+</svg>`.trim();
+      }
+
+      function buildSignaturePath(name, x, y, width, height){
+        // Deterministic pseudo cursive line from name hash
+        let h = 0;
+        for (let i=0;i<name.length;i++) h = (h*33 + name.charCodeAt(i)) >>> 0;
+        const points = [];
+        const n = 64;
+        for (let i=0;i<n;i++){
+          const t = i/(n-1);
+          const wobble = Math.sin((t*6.0 + (h%100)/50)*Math.PI*2) * 0.35
+                       + Math.sin((t*2.5 + ((h>>>8)%100)/40)*Math.PI*2) * 0.18;
+          const yy = y + (height/2) + wobble*height;
+          const xx = x + t*width;
+          points.push([xx, yy]);
+        }
+        // Add small "flourish"
+        points.push([x + width*0.86, y + height*0.2]);
+        points.push([x + width*0.93, y + height*0.75]);
+        points.push([x + width, y + height*0.45]);
+        return toSmoothPath(points);
+      }
+
+      function toSmoothPath(pts){
+        if (pts.length < 2) return "";
+        let d = `M ${pts[0][0].toFixed(2)} ${pts[0][1].toFixed(2)}`;
+        for (let i=1;i<pts.length;i++){
+          const [x,y] = pts[i];
+          const [px,py] = pts[i-1];
+          const cx = (px + x)/2;
+          const cy = (py + y)/2;
+          d += ` Q ${px.toFixed(2)} ${py.toFixed(2)} ${cx.toFixed(2)} ${cy.toFixed(2)}`;
+        }
+        const last = pts[pts.length-1];
+        d += ` T ${last[0].toFixed(2)} ${last[1].toFixed(2)}`;
+        return d;
+      }
+
+      function renderSigPreview(){
+        const svg = signatureSvgString();
+        state.docs.sigSvg = svg;
+        sigPreview.innerHTML = svg;
+      }
+
+      function drawLetterhead(){
+        const ctx = letterCanvas.getContext("2d");
+        const w=letterCanvas.width, h=letterCanvas.height;
+        ctx.clearRect(0,0,w,h);
+        // background
+        ctx.fillStyle="#ffffff";
+        ctx.fillRect(0,0,w,h);
+        // border
+        ctx.strokeStyle="#e0e0e0";
+        ctx.lineWidth=0.5;
+        roundRect(ctx, 0.5, 0.5, w-1, h-1, 12);
+        ctx.stroke();
+
+        const company = state.identity.companyName || "Company Name";
+        const addr = [
+          state.address.line1,
+          state.address.line2,
+          [state.address.city, state.address.state, state.address.pin].filter(Boolean).join(", "),
+        ].filter(Boolean).join(" • ") || "Registered Office Address";
+        const email = state.email.official || "info@company.com";
+        const phone = state.address.phone ? "+91 " + state.address.phone : "+91 XXXXXXXXXX";
+
+        // logo placeholder (use initials + flat color)
+        const logoX=40, logoY=40, logoS=56;
+        ctx.fillStyle = hashColor(company);
+        ctx.fillRect(logoX, logoY, logoS, logoS);
+        ctx.fillStyle="#ffffff";
+        ctx.font="700 20px system-ui, Inter, sans-serif";
+        ctx.textAlign="center";
+        ctx.textBaseline="middle";
+        ctx.fillText(getInitials(company), logoX + logoS/2, logoY + logoS/2);
+
+        // company name
+        ctx.textAlign="left";
+        ctx.textBaseline="alphabetic";
+        ctx.fillStyle="#111827";
+        ctx.font="600 18px system-ui, Inter, sans-serif";
+        ctx.fillText(company, 110, 62);
+
+        ctx.fillStyle="#6b7280";
+        ctx.font="500 12px system-ui, Inter, sans-serif";
+        wrapText(ctx, addr, 110, 84, w-150, 16, 3);
+
+        // contact right
+        ctx.textAlign="right";
+        ctx.fillStyle="#6b7280";
+        ctx.font="500 12px system-ui, Inter, sans-serif";
+        ctx.fillText(email, w-40, 60);
+        ctx.fillText(phone, w-40, 78);
+        ctx.fillText(state.email.website || "website", w-40, 96);
+
+        // divider line
+        ctx.strokeStyle = "#1a73e8";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(40, 128);
+        ctx.lineTo(w-40, 128);
+        ctx.stroke();
+
+        // body placeholder
+        ctx.textAlign="left";
+        ctx.fillStyle="#6b7280";
+        ctx.font="500 13px system-ui, Inter, sans-serif";
+        ctx.fillText("Letterhead Preview", 40, 170);
+        ctx.fillStyle="#111827";
+        ctx.font="500 14px system-ui, Inter, sans-serif";
+        ctx.fillText("To,", 40, 220);
+        ctx.fillStyle="#6b7280";
+        ctx.font="500 13px system-ui, Inter, sans-serif";
+        ctx.fillText("Subject: ____________________________", 40, 255);
+        ctx.fillText("Body: (Use this template for official communication)", 40, 285);
+
+        // footer
+        const footerY = h-150;
+        ctx.fillStyle="#111827";
+        ctx.font="600 13px system-ui, Inter, sans-serif";
+        ctx.fillText(`For: ${company}`, 40, footerY);
+
+        // signature block placeholder
+        ctx.strokeStyle="#e0e0e0";
+        ctx.lineWidth=0.5;
+        roundRect(ctx, 40, footerY+18, 360, 90, 12);
+        ctx.stroke();
+        ctx.fillStyle="#6b7280";
+        ctx.font="500 12px system-ui, Inter, sans-serif";
+        ctx.fillText("Signature Block", 60, footerY+55);
+
+        // seal placeholder
+        roundRect(ctx, w-170, footerY+18, 130, 90, 12);
+        ctx.stroke();
+        ctx.textAlign="center";
+        ctx.fillText("Seal", w-105, footerY+70);
+      }
+
+      function roundRect(ctx, x, y, w, h, r){
+        const rr = Math.min(r, w/2, h/2);
+        ctx.beginPath();
+        ctx.moveTo(x+rr,y);
+        ctx.arcTo(x+w,y,x+w,y+h,rr);
+        ctx.arcTo(x+w,y+h,x,y+h,rr);
+        ctx.arcTo(x,y+h,x,y,rr);
+        ctx.arcTo(x,y,x+w,y,rr);
+        ctx.closePath();
+      }
+
+      function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines){
+        const words = String(text || "").split(/\s+/);
+        let line = "";
+        let lineCount = 0;
+        for (let i=0;i<words.length;i++){
+          const test = line ? (line + " " + words[i]) : words[i];
+          const w = ctx.measureText(test).width;
+          if (w > maxWidth && line){
+            ctx.fillText(line, x, y + lineCount*lineHeight);
+            line = words[i];
+            lineCount++;
+            if (lineCount >= maxLines-1) break;
+          }else{
+            line = test;
+          }
+        }
+        if (lineCount < maxLines) ctx.fillText(line, x, y + lineCount*lineHeight);
+      }
+
+      function downloadDataUrl(dataUrl, filename){
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      function downloadText(text, filename, mime){
+        const blob = new Blob([text], { type: mime || "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 500);
+      }
+
+      async function svgToPngDataUrl(svgText, width, height){
+        const svgBlob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(svgBlob);
+        try{
+          const img = new Image();
+          const loaded = new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+          img.src = url;
+          await loaded;
+          const c = document.createElement("canvas");
+          c.width = width; c.height = height;
+          const ctx = c.getContext("2d");
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0,0,width,height);
+          ctx.drawImage(img, 0, 0, width, height);
+          return c.toDataURL("image/png");
+        }finally{
+          URL.revokeObjectURL(url);
+        }
+      }
+
+      // ----------------- Compliance calendar -----------------
+      function addDays(date, days){
+        const d = new Date(date);
+        d.setDate(d.getDate() + days);
+        return d;
+      }
+      function addMonths(date, months){
+        const d = new Date(date);
+        d.setMonth(d.getMonth() + months);
+        return d;
+      }
+      function fmtDate(d){
+        const dt = new Date(d);
+        if (Number.isNaN(dt.getTime())) return "";
+        const yyyy = dt.getFullYear();
+        const mm = pad(dt.getMonth()+1,2);
+        const dd = pad(dt.getDate(),2);
+        return `${dd}-${mm}-${yyyy}`;
+      }
+      function fyEndForYear(year, fyStart){
+        // FY ends at March 31 if April 1 start; else Dec 31
+        if (fyStart === "APRIL_1"){
+          return new Date(year, 2, 31); // Mar 31
+        }
+        return new Date(year, 11, 31); // Dec 31
+      }
+      function nextMonthly(date, day){
+        const d = new Date(date);
+        const target = new Date(d.getFullYear(), d.getMonth(), day);
+        if (target <= d){
+          return new Date(d.getFullYear(), d.getMonth()+1, day);
+        }
+        return target;
+      }
+      function complianceRows(){
+        const inc = state.identity.incorporationDate ? new Date(state.identity.incorporationDate) : new Date();
+        const fyStart = state.identity.financialYearStart || "APRIL_1";
+        const year = inc.getFullYear();
+        const fyEnd = fyEndForYear(year, fyStart);
+        const agmDeadline = addMonths(fyEnd, 6);
+        const mgt7 = addDays(agmDeadline, 60);
+        const aoc4 = addDays(agmDeadline, 30);
+
+        const today = new Date();
+        const gstr1 = nextMonthly(today, 11);
+        const gstr3b = nextMonthly(today, 20);
+
+        const tdsDeadlines = [
+          new Date(today.getFullYear(), 6, 31),  // 31 July
+          new Date(today.getFullYear(), 9, 31),  // 31 Oct
+          new Date(today.getFullYear()+1, 0, 31),// 31 Jan
+          new Date(today.getFullYear()+1, 4, 31) // 31 May
+        ].filter(d => d >= today).slice(0,4);
+
+        const advTax = [
+          new Date(today.getFullYear(), 5, 15),
+          new Date(today.getFullYear(), 8, 15),
+          new Date(today.getFullYear(), 11, 15),
+          new Date(today.getFullYear()+1, 2, 15)
+        ].filter(d => d >= today).slice(0,4);
+
+        const itr = new Date(today.getFullYear(), 9, 31); // 31 Oct
+        const itrDate = itr < today ? new Date(today.getFullYear()+1, 9, 31) : itr;
+
+        return [
+          { item:"AGM deadline", due: fmtDate(agmDeadline), note:"6 months from financial year end" },
+          { item:"MGT-7 (Annual Return)", due: fmtDate(mgt7), note:"60 days from AGM" },
+          { item:"AOC-4 (Financial Statements)", due: fmtDate(aoc4), note:"30 days from AGM" },
+          { item:"GSTR-1 (Monthly)", due: fmtDate(gstr1), note:"11th of next month (next upcoming)" },
+          { item:"GSTR-3B (Monthly)", due: fmtDate(gstr3b), note:"20th of next month (next upcoming)" },
+          { item:"TDS Return (Quarterly)", due: tdsDeadlines.map(fmtDate).join(" • "), note:"31 Jul, 31 Oct, 31 Jan, 31 May (upcoming)" },
+          { item:"Advance Tax (Installments)", due: advTax.map(fmtDate).join(" • "), note:"15 Jun, 15 Sep, 15 Dec, 15 Mar (upcoming)" },
+          { item:"Income Tax Return (Audit cases)", due: fmtDate(itrDate), note:"31 October" },
+        ];
+      }
+      function renderCompliance(){
+        state.compliance.rows = complianceRows();
+        state.compliance.generatedAt = nowIso();
+        const wrap = document.getElementById("complianceTableWrap");
+        const rows = state.compliance.rows;
+        wrap.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th style="width:42%;">Compliance</th>
+                <th style="width:28%;">Due Date</th>
+                <th>Basis</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(r => `
+                <tr>
+                  <td>${escapeHtml(r.item)}</td>
+                  <td>${escapeHtml(r.due)}</td>
+                  <td>${escapeHtml(r.note)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+          <div class="hint" style="margin-top:.5rem;">Generated at: ${escapeHtml(new Date(state.compliance.generatedAt).toLocaleString())}</div>
+        `;
+      }
+
+      // ----------------- Progress + completion -----------------
+      function allFieldPaths(){
+        const paths = [
+          // identity
+          "identity.companyName","identity.companyType","identity.incorporationDate",
+          "identity.financialYearStart","identity.registeredState","identity.cin","identity.pan","identity.tan",
+          // tax
+          "tax.gstNumber","tax.udyam","tax.ptNo",
+          // address
+          "address.line1","address.line2","address.city","address.pin","address.phone","address.fax",
+          // email
+          "email.official","email.accounts","email.hr","email.legal","email.website",
+          // bank
+          "bank.bankName","bank.accountType","bank.accountNumber","bank.ifsc","bank.branchName","bank.branchAddress","bank.micr","bank.swift",
+        ];
+        // directors
+        state.directors.forEach((_, idx) => {
+          paths.push(`directors.${idx}.name`);
+          paths.push(`directors.${idx}.din`);
+          paths.push(`directors.${idx}.designation`);
+          paths.push(`directors.${idx}.appointmentDate`);
+          paths.push(`directors.${idx}.pan`);
+          paths.push(`directors.${idx}.nationality`);
+        });
+        return paths;
+      }
+      function isFilled(val){
+        if (val == null) return false;
+        if (typeof val === "string") return val.trim().length > 0;
+        return true;
+      }
+      function countFilled(){
+        const paths = allFieldPaths();
+        let filled = 0;
+        for (const p of paths){
+          const v = getByPath(state, p);
+          if (isFilled(v)) filled++;
+        }
+        return { filled, total: paths.length };
+      }
+
+      function sectionComplete(sectionId){
+        // completion heuristics: all main fields in that section (directors: all current director cards filled)
+        const map = {
+          identity: ["identity.companyName","identity.companyType","identity.incorporationDate","identity.financialYearStart","identity.registeredState","identity.cin","identity.pan","identity.tan"],
+          tax: ["tax.gstNumber","tax.udyam","tax.ptNo"],
+          address: ["address.line1","address.city","address.pin","address.phone"],
+          email: ["email.official","email.accounts","email.hr","email.legal","email.website"],
+          directors: [],
+          bank: ["bank.bankName","bank.accountType","bank.accountNumber","bank.ifsc","bank.branchName","bank.branchAddress"],
+          docs: [], // generated assets optional, still track via buttons in summary
+          compliance: [], // generated auto
+          export: [],
+        };
+        if (sectionId === "directors"){
+          if (!state.directors.length) return false;
+          return state.directors.every((_, idx) => ["name","din","designation","appointmentDate","pan","nationality"].every(k => isFilled(getByPath(state, `directors.${idx}.${k}`))));
+        }
+        const fields = map[sectionId] || [];
+        if (!fields.length){
+          // docs/compliance/export: treat complete if earlier sections complete
+          if (sectionId === "docs"){
+            return !!(state.identity.companyName && (state.identity.cin || state.identity.pan));
+          }
+          if (sectionId === "compliance"){
+            return !!state.identity.incorporationDate;
+          }
+          if (sectionId === "export"){
+            const c = countFilled();
+            return c.filled > 0;
+          }
+          return false;
+        }
+        return fields.every(p => isFilled(getByPath(state, p)));
+      }
+
+      function updateProgress(){
+        const { filled, total } = countFilled();
+        const pct = total ? Math.round((filled/total)*100) : 0;
+        document.getElementById("progressMeta").textContent = `${pct}% filled`;
+        document.getElementById("progressCount").textContent = `${filled} / ${total}`;
+        document.getElementById("progressBar").style.width = `${pct}%`;
+        SECTIONS.forEach(sec => {
+          const check = document.getElementById(`check-${sec.id}`);
+          if (!check) return;
+          const done = sectionComplete(sec.id);
+          check.classList.toggle("done", !!done);
+        });
+      }
+
+      // ----------------- Summary/export -----------------
+      function formatAllDetails(){
+        const lines = [];
+        lines.push("INDIAN COMPANY PROFILE SETUP");
+        lines.push("");
+        lines.push("1. COMPANY IDENTITY");
+        lines.push(`- Company Name: ${state.identity.companyName || ""}`);
+        lines.push(`- Company Type: ${state.identity.companyType || ""}`);
+        lines.push(`- CIN: ${state.identity.cin || ""}`);
+        lines.push(`- Incorporation Date: ${state.identity.incorporationDate || ""}`);
+        lines.push(`- FY Start: ${state.identity.financialYearStart === "APRIL_1" ? "April 1" : (state.identity.financialYearStart === "JAN_1" ? "January 1" : "")}`);
+        lines.push(`- Registered State: ${state.identity.registeredState || ""}`);
+        lines.push(`- PAN: ${state.identity.pan || ""}`);
+        lines.push(`- TAN: ${state.identity.tan || ""}`);
+        lines.push("");
+
+        lines.push("2. TAX REGISTRATIONS");
+        lines.push(`- GST Number: ${state.tax.gstNumber || ""}`);
+        lines.push(`- GST Registration State: ${state.tax.gstRegState || ""}`);
+        lines.push(`- Udyam (MSME): ${state.tax.udyam || ""}`);
+        lines.push(`- PT No.: ${state.tax.ptNo || ""}`);
+        lines.push("");
+
+        lines.push("3. REGISTERED OFFICE ADDRESS");
+        lines.push(`- Address Line 1: ${state.address.line1 || ""}`);
+        lines.push(`- Address Line 2: ${state.address.line2 || ""}`);
+        lines.push(`- City: ${state.address.city || ""}`);
+        lines.push(`- State: ${state.address.state || ""}`);
+        lines.push(`- PIN: ${state.address.pin || ""}`);
+        lines.push(`- Phone: +91 ${state.address.phone || ""}`);
+        lines.push(`- Fax: ${state.address.fax || ""}`);
+        lines.push("");
+
+        lines.push("4. EMAIL & COMMUNICATION");
+        lines.push(`- Official Email: ${state.email.official || ""}`);
+        lines.push(`- Accounts Email: ${state.email.accounts || ""}`);
+        lines.push(`- HR/Admin Email: ${state.email.hr || ""}`);
+        lines.push(`- Legal/Compliance Email: ${state.email.legal || ""}`);
+        lines.push(`- Website: ${state.email.website || ""}`);
+        lines.push("");
+
+        lines.push("5. DIRECTORS & OFFICERS");
+        state.directors.forEach((d, idx) => {
+          lines.push(`- Director ${idx+1}: ${d.name || ""}`);
+          lines.push(`  DIN: ${d.din || ""}`);
+          lines.push(`  Designation: ${d.designation || ""}`);
+          lines.push(`  Appointment Date: ${d.appointmentDate || ""}`);
+          lines.push(`  PAN: ${d.pan || ""}`);
+          lines.push(`  Nationality: ${d.nationality || ""}`);
+        });
+        lines.push("");
+
+        lines.push("6. BANK DETAILS");
+        lines.push(`- Bank: ${state.bank.bankName || ""}`);
+        lines.push(`- Account Type: ${state.bank.accountType || ""}`);
+        lines.push(`- Account Number: ${state.bank.accountNumber || ""}`);
+        lines.push(`- IFSC: ${state.bank.ifsc || ""}`);
+        lines.push(`- Branch Name: ${state.bank.branchName || ""}`);
+        lines.push(`- Branch Address: ${state.bank.branchAddress || ""}`);
+        lines.push(`- MICR: ${state.bank.micr || ""}`);
+        lines.push(`- Swift: ${state.bank.swift || ""}`);
+        lines.push("");
+
+        lines.push("8. COMPLIANCE CALENDAR");
+        (state.compliance.rows || []).forEach(r => {
+          lines.push(`- ${r.item}: ${r.due} (${r.note})`);
+        });
+        lines.push("");
+
+        return lines.join("\\n");
+      }
+
+      async function copyAll(){
+        const text = formatAllDetails();
+        try{
+          await navigator.clipboard.writeText(text);
+          autosavePill.textContent = "Copied";
+          setTimeout(() => autosavePill.textContent = "Saved", 700);
+        }catch(e){
+          // fallback
+          const ta = document.getElementById("summaryText");
+          ta.focus();
+          ta.select();
+          document.execCommand("copy");
+        }
+      }
+
+      function downloadJson(){
+        const filename = safeFileName(state.identity.companyName || "company") + "-profile.json";
+        downloadText(JSON.stringify(state, null, 2), filename, "application/json");
+      }
+
+      function safeFileName(name){
+        return String(name).trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || "company";
+      }
+
+      // ----------------- Email generator -----------------
+      function deriveDomain(){
+        const website = (state.email.website || "").trim();
+        const official = (state.email.official || "").trim();
+        function cleanDomain(d){
+          return d.replace(/^https?:\/\//i,"").replace(/^www\./i,"").split("/")[0].trim();
+        }
+        if (website) return cleanDomain(website);
+        if (official.includes("@")) return official.split("@")[1].trim();
+        const base = (state.identity.companyName || "company").toLowerCase().replace(/[^a-z0-9]+/g,"").slice(0,16) || "company";
+        return base + ".com";
+      }
+
+      function genSampleEmails(){
+        const domain = deriveDomain();
+        state.email.official = state.email.official || `info@${domain}`;
+        state.email.accounts = state.email.accounts || `accounts@${domain}`;
+        state.email.hr = state.email.hr || `admin@${domain}`;
+        state.email.legal = state.email.legal || `compliance@${domain}`;
+        syncInputsFromState();
+        validateEmails();
+        updateAll();
+        scheduleSave();
+      }
+
+      // ----------------- Update all UI -----------------
+      function updateSummary(){
+        document.getElementById("summaryText").value = formatAllDetails();
+      }
+      function updateAll(){
+        updateProgress();
+        updateSummary();
+      }
+
+      // ----------------- Wiring buttons -----------------
+      function wireButtons(){
+        document.querySelectorAll("[data-autogen]").forEach(btn => {
+          btn.addEventListener("click", () => handleAutoGen(btn.getAttribute("data-autogen")));
+        });
+        document.getElementById("generateAllBtn").addEventListener("click", generateAll);
+        document.getElementById("copyAllBtn").addEventListener("click", copyAll);
+        document.getElementById("copyAllBtn2").addEventListener("click", copyAll);
+        document.getElementById("downloadJsonBtn").addEventListener("click", downloadJson);
+        document.getElementById("downloadJsonBtn2").addEventListener("click", downloadJson);
+        document.getElementById("printBtn").addEventListener("click", () => window.print());
+        document.getElementById("printBtn2").addEventListener("click", () => window.print());
+        document.getElementById("genEmailsBtn").addEventListener("click", genSampleEmails);
+        document.getElementById("regenComplianceBtn").addEventListener("click", () => { renderCompliance(); updateAll(); scheduleSave(); });
+
+        document.getElementById("addDirectorBtn").addEventListener("click", () => {
+          if (state.directors.length >= 5) return;
+          state.directors.push(emptyDirector());
+          renderDirectors();
+          updateAll();
+          scheduleSave();
+        });
+
+        // docs
+        document.getElementById("genSealBtn").addEventListener("click", () => { drawSeal(); state.docs.sealSvg = sealSvgString(); scheduleSave(); });
+        document.getElementById("dlSealPngBtn").addEventListener("click", () => downloadDataUrl(sealCanvas.toDataURL("image/png"), safeFileName(state.identity.companyName||"company")+"-seal.png"));
+        document.getElementById("dlSealSvgBtn").addEventListener("click", () => downloadText(sealSvgString(), safeFileName(state.identity.companyName||"company")+"-seal.svg", "image/svg+xml"));
+
+        document.getElementById("genLogoBtn").addEventListener("click", () => drawLogo());
+        document.getElementById("dlLogoPngBtn").addEventListener("click", () => downloadDataUrl(logoCanvas.toDataURL("image/png"), safeFileName(state.identity.companyName||"company")+"-logo.png"));
+
+        document.getElementById("genSigBtn").addEventListener("click", () => { renderSigPreview(); scheduleSave(); });
+        document.getElementById("dlSigSvgBtn").addEventListener("click", () => downloadText(signatureSvgString(), safeFileName(state.identity.companyName||"company")+"-signature-block.svg", "image/svg+xml"));
+        document.getElementById("dlSigPngBtn").addEventListener("click", async () => {
+          const png = await svgToPngDataUrl(signatureSvgString(), 600, 200);
+          downloadDataUrl(png, safeFileName(state.identity.companyName||"company")+"-signature-block.png");
+        });
+
+        document.getElementById("genLetterBtn").addEventListener("click", () => drawLetterhead());
+        document.getElementById("dlLetterPngBtn").addEventListener("click", () => downloadDataUrl(letterCanvas.toDataURL("image/png"), safeFileName(state.identity.companyName||"company")+"-letterhead.png"));
+
+        document.getElementById("clearBtn").addEventListener("click", () => {
+          localStorage.removeItem(STORAGE_KEY);
+          state = deepClone(defaultState);
+          ensureDirectors();
+          syncDerivedFields();
+          syncInputsFromState();
+          renderDirectors();
+          renderCompliance();
+          drawSeal(); state.docs.sealSvg = sealSvgString();
+          drawLogo();
+          renderSigPreview();
+          drawLetterhead();
+          updateAll();
+          autosavePill.textContent = "Cleared";
+          setTimeout(() => autosavePill.textContent = "Saved", 700);
+        });
+      }
+
+      // ----------------- Init -----------------
+      function init(){
+        load();
+        populateStates();
+        ensureDirectors();
+        syncDerivedFields();
+        renderNav();
+        bindInputs();
+        syncInputsFromState();
+        validateEmails();
+        renderDirectors();
+        renderCompliance();
+        // initial docs
+        drawSeal(); state.docs.sealSvg = sealSvgString();
+        drawLogo();
+        renderSigPreview();
+        drawLetterhead();
+        updateAll();
+        wireButtons();
+
+        // keep derived fields in sync if state changes via load
+        scheduleSave();
+      }
+
+      init();
+    </script>
+  </body>
+</html>
+

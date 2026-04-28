@@ -183,7 +183,10 @@ router.post('/login', async (req, res) => {
         status: authError.status,
         error: authError,
       });
-      return res.status(401).json({ 
+      // Supabase can rate-limit repeated failed login attempts (429).
+      // Preserve the status so the frontend can show a cooldown UI.
+      const status = typeof authError.status === 'number' ? authError.status : 401;
+      return res.status(status).json({ 
         success: false, 
         error: authError.message || 'Invalid email or password',
         details: process.env.NODE_ENV === 'development' ? authError.message : undefined,

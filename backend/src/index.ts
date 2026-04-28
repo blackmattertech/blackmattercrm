@@ -21,6 +21,7 @@ import marketingRoutes from './routes/marketing.routes.js';
 import notificationsRoutes from './routes/notifications.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import usersRoutes from './routes/users.routes.js';
+import blogsRoutes from './routes/blogs.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/error.middleware.js';
@@ -182,6 +183,7 @@ app.use('/api/marketing', marketingRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/blogs', blogsRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

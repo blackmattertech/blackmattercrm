@@ -8,6 +8,7 @@ import { CRM } from "./modules/CRM";
 import { Accounts } from "./modules/Accounts";
 import { Products } from "./modules/Products";
 import { Marketing } from "./modules/Marketing";
+import { Blogs } from "./modules/Blogs";
 import { Teams } from "./modules/Teams";
 import { Notifications } from "./modules/Notifications";
 import { Settings } from "./modules/Settings";
@@ -87,12 +88,22 @@ export default function App() {
         return <Products />;
       case "marketing":
         return <Marketing />;
+      case "blogs":
+        return <Blogs />;
       case "teams":
         return <Teams />;
       case "notifications":
         return <Notifications />;
-      case "settings":
-        return <Settings />;
+      case "settings-users":
+        return <Settings initialTab="users" hideTabs />;
+      case "settings-pending":
+        return <Settings initialTab="pending" hideTabs />;
+      case "settings-company":
+        return <Settings initialTab="company" hideTabs />;
+      case "settings-integrations":
+        return <Settings initialTab="integrations" hideTabs />;
+      case "settings-preferences":
+        return <Settings initialTab="preferences" hideTabs />;
       default:
         return <Dashboard />;
     }
